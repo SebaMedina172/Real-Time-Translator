@@ -7,6 +7,7 @@ import whisper
 import time
 import threading
 from googletrans import Translator
+import spacy
 
 # Configuración básica
 RATE = 16000
@@ -21,6 +22,9 @@ model = whisper.load_model("base")  # Puedes cambiar "base" por otro modelo si p
 
 # Inicializar el traductor de Google
 translator = Translator()
+
+# Cargar el modelo de spaCy para segmentación de oraciones
+nlp = spacy.load("es_core_news_sm")  # Puedes cambiar esto por el modelo adecuado (español o inglés)
 
 audio = pyaudio.PyAudio()
 stream = audio.open(format=pyaudio.paInt16,
@@ -57,30 +61,111 @@ def is_loud_enough(frame, threshold=500):
 
 def transcribe_and_translate(audio_file):
     try:
+        # Verifica si el archivo es válido
+        if audio_file is None:
+            print("Archivo de audio no válido.")
+            return None
+        
         # Realiza la transcripción con Whisper
         result = model.transcribe(audio_file)
-        text = result['text']
+        
+        # Extrae el texto de la transcripción
+        text = result.get('text', None)
+        
+        # Verifica si la transcripción está vacía
+        if not text:
+            print("La transcripción está vacía.")
+            return None
         
         # Detecta el idioma
         detected_language = result['language']
-        #print(f"Idioma detectado: {detected_language}")
+        
+        # Segmentación del texto usando spaCy para identificar oraciones
+        doc = nlp(text)
+        sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
         
         # Traducción bidireccional
+        translated_sentences = []
         if detected_language == "es":
-            #print(f"Texto en español: {text}")
-            translated_text = translator.translate(text, src='es', dest='en').text
-            #print(f"Texto traducido al inglés: {translated_text}")
+            for sentence in sentences:
+                translated_text = translator.translate(sentence, src='es', dest='en').text
+                translated_sentences.append(translated_text)
         elif detected_language == "en":
-            #print(f"Texto en inglés: {text}")
-            translated_text = translator.translate(text, src='en', dest='es').text
-            #print(f"Texto traducido al español: {translated_text}")
+            for sentence in sentences:
+                translated_text = translator.translate(sentence, src='en', dest='es').text
+                translated_sentences.append(translated_text)
         else:
-            translated_text = text
+            translated_sentences = sentences
         
-        return translated_text
+        return " ".join(translated_sentences)
+    
     except Exception as e:
         print(f"Error al transcribir o traducir: {e}")
         return None
+
+# Función para dividir las oraciones largas
+def split_long_audio(text, max_duration=5, buffer_duration=2):
+    """
+    Divide un texto largo en fragmentos de oraciones, forzando cortes en fragmentos largos.
+    
+    text: texto completo a dividir.
+    max_duration: máximo tiempo permitido (en segundos) antes de forzar un corte.
+    buffer_duration: duración (en segundos) del contexto añadido al inicio del siguiente fragmento.
+    """
+    # Segmentamos el texto en oraciones con spaCy
+    doc = nlp(text)
+    sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    
+    # Variables para dividir el texto
+    segments = []
+    current_segment = []
+    current_duration = 0  # Duración acumulada de la oración en segundos (esto puede necesitar un ajuste dependiendo de cómo proceses los audios)
+
+    for sentence in sentences:
+        sentence_duration = len(sentence) / 10  # Aproximación de la duración de la oración, puedes ajustar esta fórmula.
+        
+        if current_duration + sentence_duration <= max_duration:
+            # Si no excede el tiempo máximo, agregamos la oración al fragmento actual
+            current_segment.append(sentence)
+            current_duration += sentence_duration
+        else:
+            # Si excede el tiempo, forzamos el corte
+            segments.append(" ".join(current_segment))
+            
+            # Añadimos el buffer al siguiente segmento
+            buffer_text = " ".join(current_segment[-1:])  # Última oración como contexto
+            current_segment = [buffer_text, sentence]  # Iniciamos nuevo segmento con buffer
+            current_duration = sentence_duration
+
+    # Añadir cualquier fragmento restante
+    if current_segment:
+        segments.append(" ".join(current_segment))
+
+    return segments
+
+# Modificación en la función `process_audio` para incluir la lógica de división de oraciones largas:
+def process_audio(audio_file):
+    translated_text = transcribe_and_translate(audio_file)
+    if translated_text:
+        print(f"Texto transcrito y traducido: {translated_text}")
+        
+        # Dividimos el texto transcrito si excede el tiempo máximo sin pausa
+        segmented_text = split_long_audio(translated_text, max_duration=7, buffer_duration=2)
+        
+        # Imprimimos los segmentos procesados
+       # print("Segmentos procesados:")
+       # for segment in segmented_text:
+       #     print(segment)
+    else:
+        print("No se pudo procesar el audio correctamente.")
+    
+    #try:
+        os.remove(audio_file)
+        #print(f"Archivo {audio_file} eliminado exitosamente.")
+    #except PermissionError:
+    #    print(f"Error al intentar eliminar el archivo {audio_file}: Permiso denegado.")
+    #except Exception as e:
+    #    print(f"Error inesperado al eliminar el archivo {audio_file}: {e}")
 
 def record_audio():
     global audio_buffer, is_speaking, silence_counter, start_time
@@ -100,7 +185,7 @@ def record_audio():
             is_speaking = True
             # Si lleva más de X segundos hablando, corta la grabación
             if time.time() - start_time > MAX_CONTINUOUS_SPEECH_TIME:
-                print("Tiempo de habla continua excedido, procesando...")
+                #print("Tiempo de habla continua excedido, procesando...")#####
                 with lock:
                     temp_file = save_temp_audio(audio_buffer)
                 threading.Thread(target=process_audio, args=(temp_file,)).start()
@@ -122,24 +207,8 @@ def record_audio():
         else:
             silence_counter += 1  # Incrementa el contador de silencio cuando no se detecta voz
             if silence_counter > int(RATE / CHUNK * MAX_CONTINUOUS_SPEECH_TIME):  # Si supera el límite de silencio
-                # Si hay un largo periodo de silencio, reinicia el temporizador
                 silence_counter = 0
                 start_time = time.time()  # Reinicia el tiempo para una nueva grabación
-
-def process_audio(audio_file):
-    translated_text = transcribe_and_translate(audio_file)
-    if translated_text:
-        print(f"Traducción: {translated_text}")
-    else:
-        print("No se pudo procesar el audio correctamente.")
-    
-    try:
-        os.remove(audio_file)
-        print(f"Archivo {audio_file} eliminado exitosamente.")
-    except PermissionError:
-        print(f"Error al intentar eliminar el archivo {audio_file}: Permiso denegado.")
-    except Exception as e:
-        print(f"Error inesperado al eliminar el archivo {audio_file}: {e}")
 
 print("Escuchando... Presiona Ctrl+C para detener.")
 try:
