@@ -6,9 +6,9 @@ import numpy as np
 import whisper
 import time
 import threading
-import asyncio
 from googletrans import Translator
 import spacy
+from obs_helper import OBSManager  # Asegúrate de tener esta importación
 
 # Configuración básica
 RATE = 16000
@@ -43,6 +43,13 @@ start_time = time.time()
 # Variables de sincronización
 lock = threading.Lock()
 
+# Configurar OBS
+obs_manager = OBSManager(host="localhost", port=4455, password="your_password_here")
+obs_manager.connect()  # Conectar con OBS
+
+# Flag para manejar la detención del hilo de grabación
+recording_active = True
+
 def save_temp_audio(frames):
     temp_dir = "./temp"
     os.makedirs(temp_dir, exist_ok=True)
@@ -60,7 +67,7 @@ def is_loud_enough(frame, threshold=500):
     audio_data = np.frombuffer(frame, dtype=np.int16)
     return np.abs(audio_data).mean() > threshold
 
-async def transcribe_and_translate(audio_file):
+def transcribe_and_translate(audio_file):
     try:
         # Verifica si el archivo es válido
         if audio_file is None:
@@ -104,50 +111,25 @@ async def transcribe_and_translate(audio_file):
         print(f"Error al transcribir o traducir: {e}")
         return None
 
-# Función para dividir las oraciones largas
-def split_long_audio(text, max_duration=5, buffer_duration=2):
-    doc = nlp(text)
-    sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
-    
-    segments = []
-    current_segment = []
-    current_duration = 0
-
-    for sentence in sentences:
-        sentence_duration = len(sentence) / 10  # Aproximación de la duración de la oración
-        
-        if current_duration + sentence_duration <= max_duration:
-            current_segment.append(sentence)
-            current_duration += sentence_duration
-        else:
-            segments.append(" ".join(current_segment))
-            buffer_text = " ".join(current_segment[-1:])
-            current_segment = [buffer_text, sentence]
-            current_duration = sentence_duration
-
-    if current_segment:
-        segments.append(" ".join(current_segment))
-
-    return segments
-
-# Modificación en la función `process_audio` para incluir la lógica de división de oraciones largas:
-async def process_audio(audio_file):
-    translated_text = await transcribe_and_translate(audio_file)
+def process_audio(audio_file):
+    translated_text = transcribe_and_translate(audio_file)
     if translated_text:
         print(f"Texto transcrito y traducido: {translated_text}")
-        segmented_text = split_long_audio(translated_text, max_duration=7, buffer_duration=2)
+        
+        # Actualizamos el texto en OBS
+        obs_manager.update_text(translated_text)
     else:
         print("No se pudo procesar el audio correctamente.")
     
     try:
         os.remove(audio_file)
     except Exception as e:
-        print(f"Error al eliminar el archivo: {e}")
+        print(f"Error al eliminar el archivo {audio_file}: {e}")
 
 def record_audio():
-    global audio_buffer, is_speaking, silence_counter, start_time
+    global audio_buffer, is_speaking, silence_counter, start_time, recording_active
 
-    while True:
+    while recording_active:
         frame = stream.read(CHUNK, exception_on_overflow=False)
         try:
             is_voice = vad.is_speech(frame, RATE) or is_loud_enough(frame)
@@ -156,45 +138,54 @@ def record_audio():
             continue
 
         if is_voice:
-            silence_counter = 0
+            silence_counter = 0  # Reinicia el contador de silencio cuando se detecta voz
             with lock:
                 audio_buffer.append(frame)
             is_speaking = True
+            # Si lleva más de X segundos hablando, corta la grabación
             if time.time() - start_time > MAX_CONTINUOUS_SPEECH_TIME:
                 with lock:
                     temp_file = save_temp_audio(audio_buffer)
-                asyncio.run(process_audio(temp_file))  # Usamos asyncio para la transcripción y traducción
+                threading.Thread(target=process_audio, args=(temp_file,)).start()
                 with lock:
-                    audio_buffer = []
+                    audio_buffer = []  # Resetea el buffer
                 is_speaking = False
-                start_time = time.time()
+                start_time = time.time()  # Reinicia el temporizador
         elif is_speaking:
             silence_counter += 1
             if silence_counter > int(RATE / CHUNK * VOICE_WINDOW):
                 if len(audio_buffer) >= int(MIN_VOICE_DURATION * RATE / CHUNK):
                     with lock:
                         temp_file = save_temp_audio(audio_buffer)
-                    asyncio.run(process_audio(temp_file))  # Usamos asyncio para la transcripción y traducción
+                    threading.Thread(target=process_audio, args=(temp_file,)).start()
                 with lock:
-                    audio_buffer = []
+                    audio_buffer = []  # Resetea el buffer
                 is_speaking = False
-                start_time = time.time()
+                start_time = time.time()  # Reinicia el temporizador después del silencio
         else:
-            silence_counter += 1
-            if silence_counter > int(RATE / CHUNK * MAX_CONTINUOUS_SPEECH_TIME):
+            silence_counter += 1  # Incrementa el contador de silencio cuando no se detecta voz
+            if silence_counter > int(RATE / CHUNK * MAX_CONTINUOUS_SPEECH_TIME):  # Si supera el límite de silencio
                 silence_counter = 0
-                start_time = time.time()
+                start_time = time.time()  # Reinicia el tiempo para una nueva grabación
+
+def stop_recording():
+    global recording_active
+    recording_active = False
+    print("Deteniendo la grabación...")
 
 print("Escuchando... Presiona Ctrl+C para detener.")
 try:
+    # Iniciar hilo de grabación
     recording_thread = threading.Thread(target=record_audio)
     recording_thread.daemon = True
     recording_thread.start()
 
+    # Mantener el programa en ejecución
     while True:
         time.sleep(1)
 
 except KeyboardInterrupt:
+    stop_recording()
     print("\nDetenido por el usuario.")
 finally:
     stream.stop_stream()
