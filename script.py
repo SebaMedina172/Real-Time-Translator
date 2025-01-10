@@ -9,30 +9,23 @@ import threading
 from googletrans import Translator
 import spacy
 from obs_helper import OBSManager  # Asegúrate de tener esta importación
-
-# Configuración básica
-RATE = 16000
-CHUNK_DURATION_MS = 30
-CHUNK = int(RATE * CHUNK_DURATION_MS / 1000)
-VOICE_WINDOW = 0.4
-MIN_VOICE_DURATION = 0.3
-MAX_CONTINUOUS_SPEECH_TIME = 5  # Máximo tiempo de grabación continua en segundos
+import config  # Importamos las configuraciones
 
 # Cargar el modelo de Whisper
-model = whisper.load_model("base")  # Puedes cambiar "base" por otro modelo si prefieres mayor precisión
+model = whisper.load_model(config.WHISPER_MODEL)  # Usar el modelo configurado
 
 # Inicializar el traductor de Google
 translator = Translator()
 
 # Cargar el modelo de spaCy para segmentación de oraciones
-nlp = spacy.load("es_core_news_sm")  # Puedes cambiar esto por el modelo adecuado (español o inglés)
+nlp = spacy.load(config.SPACY_MODEL)  # Usar el modelo configurado
 
 audio = pyaudio.PyAudio()
 stream = audio.open(format=pyaudio.paInt16,
                     channels=1,
-                    rate=RATE,
+                    rate=config.RATE,
                     input=True,
-                    frames_per_buffer=CHUNK)
+                    frames_per_buffer=config.CHUNK)
 vad = webrtcvad.Vad(2)
 
 audio_buffer = []
@@ -44,26 +37,26 @@ start_time = time.time()
 lock = threading.Lock()
 
 # Configurar OBS
-obs_manager = OBSManager(host="localhost", port=4455, password="your_password_here")
+obs_manager = OBSManager(host=config.HOST, port=config.PORT, password=config.PASSWORD)
 obs_manager.connect()  # Conectar con OBS
 
 # Flag para manejar la detención del hilo de grabación
 recording_active = True
 
 def save_temp_audio(frames):
-    temp_dir = "./temp"
+    temp_dir = config.TEMP_DIR
     os.makedirs(temp_dir, exist_ok=True)
     temp_file_path = os.path.join(temp_dir, "temp_audio.wav")
     
     with wave.open(temp_file_path, 'wb') as wf:
         wf.setnchannels(1)
         wf.setsampwidth(audio.get_sample_size(pyaudio.paInt16))
-        wf.setframerate(RATE)
+        wf.setframerate(config.RATE)  # Usar la tasa de muestreo configurada
         wf.writeframes(b''.join(frames))
     
     return temp_file_path
 
-def is_loud_enough(frame, threshold=500):
+def is_loud_enough(frame, threshold=config.THRESHOLD):
     audio_data = np.frombuffer(frame, dtype=np.int16)
     return np.abs(audio_data).mean() > threshold
 
@@ -130,9 +123,9 @@ def record_audio():
     global audio_buffer, is_speaking, silence_counter, start_time, recording_active
 
     while recording_active:
-        frame = stream.read(CHUNK, exception_on_overflow=False)
+        frame = stream.read(config.CHUNK, exception_on_overflow=False)
         try:
-            is_voice = vad.is_speech(frame, RATE) or is_loud_enough(frame)
+            is_voice = vad.is_speech(frame, config.RATE) or is_loud_enough(frame)
         except webrtcvad.Error as e:
             print(f"Error en VAD: {e}")
             continue
@@ -143,7 +136,7 @@ def record_audio():
                 audio_buffer.append(frame)
             is_speaking = True
             # Si lleva más de X segundos hablando, corta la grabación
-            if time.time() - start_time > MAX_CONTINUOUS_SPEECH_TIME:
+            if time.time() - start_time > config.MAX_CONTINUOUS_SPEECH_TIME:
                 with lock:
                     temp_file = save_temp_audio(audio_buffer)
                 threading.Thread(target=process_audio, args=(temp_file,)).start()
@@ -153,8 +146,8 @@ def record_audio():
                 start_time = time.time()  # Reinicia el temporizador
         elif is_speaking:
             silence_counter += 1
-            if silence_counter > int(RATE / CHUNK * VOICE_WINDOW):
-                if len(audio_buffer) >= int(MIN_VOICE_DURATION * RATE / CHUNK):
+            if silence_counter > int(config.RATE / config.CHUNK * config.VOICE_WINDOW):
+                if len(audio_buffer) >= int(config.MIN_VOICE_DURATION * config.RATE / config.CHUNK):
                     with lock:
                         temp_file = save_temp_audio(audio_buffer)
                     threading.Thread(target=process_audio, args=(temp_file,)).start()
@@ -164,7 +157,7 @@ def record_audio():
                 start_time = time.time()  # Reinicia el temporizador después del silencio
         else:
             silence_counter += 1  # Incrementa el contador de silencio cuando no se detecta voz
-            if silence_counter > int(RATE / CHUNK * MAX_CONTINUOUS_SPEECH_TIME):  # Si supera el límite de silencio
+            if silence_counter > int(config.RATE / config.CHUNK * config.MAX_CONTINUOUS_SPEECH_TIME):  # Si supera el límite de silencio
                 silence_counter = 0
                 start_time = time.time()  # Reinicia el tiempo para una nueva grabación
 
