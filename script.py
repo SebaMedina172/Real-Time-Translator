@@ -6,6 +6,7 @@ import numpy as np
 import whisper
 import time
 import threading
+import asyncio
 from googletrans import Translator
 import spacy
 
@@ -59,7 +60,7 @@ def is_loud_enough(frame, threshold=500):
     audio_data = np.frombuffer(frame, dtype=np.int16)
     return np.abs(audio_data).mean() > threshold
 
-def transcribe_and_translate(audio_file):
+async def transcribe_and_translate(audio_file):
     try:
         # Verifica si el archivo es válido
         if audio_file is None:
@@ -105,67 +106,43 @@ def transcribe_and_translate(audio_file):
 
 # Función para dividir las oraciones largas
 def split_long_audio(text, max_duration=5, buffer_duration=2):
-    """
-    Divide un texto largo en fragmentos de oraciones, forzando cortes en fragmentos largos.
-    
-    text: texto completo a dividir.
-    max_duration: máximo tiempo permitido (en segundos) antes de forzar un corte.
-    buffer_duration: duración (en segundos) del contexto añadido al inicio del siguiente fragmento.
-    """
-    # Segmentamos el texto en oraciones con spaCy
     doc = nlp(text)
     sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
     
-    # Variables para dividir el texto
     segments = []
     current_segment = []
-    current_duration = 0  # Duración acumulada de la oración en segundos (esto puede necesitar un ajuste dependiendo de cómo proceses los audios)
+    current_duration = 0
 
     for sentence in sentences:
-        sentence_duration = len(sentence) / 10  # Aproximación de la duración de la oración, puedes ajustar esta fórmula.
+        sentence_duration = len(sentence) / 10  # Aproximación de la duración de la oración
         
         if current_duration + sentence_duration <= max_duration:
-            # Si no excede el tiempo máximo, agregamos la oración al fragmento actual
             current_segment.append(sentence)
             current_duration += sentence_duration
         else:
-            # Si excede el tiempo, forzamos el corte
             segments.append(" ".join(current_segment))
-            
-            # Añadimos el buffer al siguiente segmento
-            buffer_text = " ".join(current_segment[-1:])  # Última oración como contexto
-            current_segment = [buffer_text, sentence]  # Iniciamos nuevo segmento con buffer
+            buffer_text = " ".join(current_segment[-1:])
+            current_segment = [buffer_text, sentence]
             current_duration = sentence_duration
 
-    # Añadir cualquier fragmento restante
     if current_segment:
         segments.append(" ".join(current_segment))
 
     return segments
 
 # Modificación en la función `process_audio` para incluir la lógica de división de oraciones largas:
-def process_audio(audio_file):
-    translated_text = transcribe_and_translate(audio_file)
+async def process_audio(audio_file):
+    translated_text = await transcribe_and_translate(audio_file)
     if translated_text:
         print(f"Texto transcrito y traducido: {translated_text}")
-        
-        # Dividimos el texto transcrito si excede el tiempo máximo sin pausa
         segmented_text = split_long_audio(translated_text, max_duration=7, buffer_duration=2)
-        
-        # Imprimimos los segmentos procesados
-       # print("Segmentos procesados:")
-       # for segment in segmented_text:
-       #     print(segment)
     else:
         print("No se pudo procesar el audio correctamente.")
     
-    #try:
+    try:
         os.remove(audio_file)
-        #print(f"Archivo {audio_file} eliminado exitosamente.")
-    #except PermissionError:
-    #    print(f"Error al intentar eliminar el archivo {audio_file}: Permiso denegado.")
-    #except Exception as e:
-    #    print(f"Error inesperado al eliminar el archivo {audio_file}: {e}")
+    except Exception as e:
+        print(f"Error al eliminar el archivo: {e}")
 
 def record_audio():
     global audio_buffer, is_speaking, silence_counter, start_time
@@ -179,45 +156,41 @@ def record_audio():
             continue
 
         if is_voice:
-            silence_counter = 0  # Reinicia el contador de silencio cuando se detecta voz
+            silence_counter = 0
             with lock:
                 audio_buffer.append(frame)
             is_speaking = True
-            # Si lleva más de X segundos hablando, corta la grabación
             if time.time() - start_time > MAX_CONTINUOUS_SPEECH_TIME:
-                #print("Tiempo de habla continua excedido, procesando...")#####
                 with lock:
                     temp_file = save_temp_audio(audio_buffer)
-                threading.Thread(target=process_audio, args=(temp_file,)).start()
+                asyncio.run(process_audio(temp_file))  # Usamos asyncio para la transcripción y traducción
                 with lock:
-                    audio_buffer = []  # Resetea el buffer
+                    audio_buffer = []
                 is_speaking = False
-                start_time = time.time()  # Reinicia el temporizador
+                start_time = time.time()
         elif is_speaking:
             silence_counter += 1
             if silence_counter > int(RATE / CHUNK * VOICE_WINDOW):
                 if len(audio_buffer) >= int(MIN_VOICE_DURATION * RATE / CHUNK):
                     with lock:
                         temp_file = save_temp_audio(audio_buffer)
-                    threading.Thread(target=process_audio, args=(temp_file,)).start()
+                    asyncio.run(process_audio(temp_file))  # Usamos asyncio para la transcripción y traducción
                 with lock:
-                    audio_buffer = []  # Resetea el buffer
+                    audio_buffer = []
                 is_speaking = False
-                start_time = time.time()  # Reinicia el temporizador después del silencio
+                start_time = time.time()
         else:
-            silence_counter += 1  # Incrementa el contador de silencio cuando no se detecta voz
-            if silence_counter > int(RATE / CHUNK * MAX_CONTINUOUS_SPEECH_TIME):  # Si supera el límite de silencio
+            silence_counter += 1
+            if silence_counter > int(RATE / CHUNK * MAX_CONTINUOUS_SPEECH_TIME):
                 silence_counter = 0
-                start_time = time.time()  # Reinicia el tiempo para una nueva grabación
+                start_time = time.time()
 
 print("Escuchando... Presiona Ctrl+C para detener.")
 try:
-    # Iniciar hilo de grabación
     recording_thread = threading.Thread(target=record_audio)
     recording_thread.daemon = True
     recording_thread.start()
 
-    # Mantener el programa en ejecución
     while True:
         time.sleep(1)
 
