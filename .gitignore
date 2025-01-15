@@ -1,0 +1,12 @@
+node_modules
+__init__.py
+package-lock.json
+package.json
+/Overlay
+/Config
+/audio_test
+/__pycache__
+/Interfaz Grafica
+/Interfaz Grafica(prueba)
+/venv
+/temp

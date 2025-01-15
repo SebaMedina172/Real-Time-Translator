@@ -1,0 +1,69 @@
+import whisper
+from googletrans import Translator
+import spacy
+import os
+import config
+
+# Cargar modelos
+model = whisper.load_model(config.WHISPER_MODEL)
+translator = Translator()
+nlp_es = spacy.load(config.SPACY_MODEL_ES)
+nlp_en = spacy.load(config.SPACY_MODEL_EN)
+
+
+def transcribe_and_translate(audio_file):
+    try:
+        # Realiza la transcripción con Whisper
+        result = model.transcribe(audio_file)
+        
+        # Extrae el texto de la transcripción
+        text = result.get('text', None)
+        
+        if not text:
+            print("La transcripción está vacía.")
+            return None
+        
+        # Detecta el idioma de la transcripción
+        detected_language = result['language']
+
+        # Segmentación del texto usando spaCy según el idioma detectado
+        if detected_language == "es":
+            doc = nlp_es(text)
+        elif detected_language == "en":
+            doc = nlp_en(text)
+        else:
+            print("Idioma no soportado.")
+            return None
+        
+        sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+        
+        # Dividir el texto en partes más pequeñas basadas en las pausas naturales
+        translated_sentences = []
+        for sentence in sentences:
+            # Traducir de forma bidireccional según el idioma detectado
+            if detected_language == "es":
+                translated_sentences.append(translator.translate(sentence, src='es', dest='en').text)
+            elif detected_language == "en":
+                translated_sentences.append(translator.translate(sentence, src='en', dest='es').text)
+            else:
+                translated_sentences.append(sentence)
+        
+        translated_text = " ".join(translated_sentences)
+        
+        return translated_text
+
+    except Exception as e:
+        print(f"Error al transcribir o traducir: {e}")
+        return None
+
+def process_audio(audio_file):
+    config.translated_text = transcribe_and_translate(audio_file)
+    if config.translated_text:
+        print(f"Texto traducido: {config.translated_text}")
+    try:
+        os.remove(audio_file)
+    except Exception as e:
+        print(f"Error al eliminar archivo: {e}")
+
+
+
