@@ -1,0 +1,1254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>918</width>
+    <height>523</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(0, 0, 0);</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="8">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="Inferior">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1,1">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QFrame" name="column_1">
+         <property name="maximumSize">
+          <size>
+           <width>250</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QFrame{
+	background-color: rgb(70, 77, 95);
+}
+
+QPushButton{
+	font:87 12pt &quot;Sans Serif&quot;;
+	font-weight: bold;
+	background-color: #0107DB;
+	color: #EAEAEA;
+	border-radius:5px;
+	border:3px solid #24272a;
+	padding:5px;
+}
+
+QPushButton:hover{
+	background-color: rgb(1, 5, 136);
+	border-radius:5px;
+	border:3px solid 6C757D;
+
+}
+
+
+</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,8">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="arrow_frame">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <property name="topMargin">
+              <number>25</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="Larrow">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>../../../../../.designer/backup/imgs/left arrow.svg</normaloff>../../../../../.designer/backup/imgs/left arrow.svg</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="Rarrow">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>../../../../../.designer/backup/imgs/right arrow.svg</normaloff>../../../../../.designer/backup/imgs/right arrow.svg</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_26">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_13">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="leftMargin">
+              <number>9</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="play">
+               <property name="layoutDirection">
+                <enum>Qt::RightToLeft</enum>
+               </property>
+               <property name="text">
+                <string>Iniciar Traduccion</string>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>../../../../../.designer/backup/imgs/play.svg</normaloff>../../../../../.designer/backup/imgs/play.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>28</width>
+                 <height>28</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pause">
+               <property name="layoutDirection">
+                <enum>Qt::RightToLeft</enum>
+               </property>
+               <property name="text">
+                <string>Parar Traduccion </string>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>../../../../../.designer/backup/imgs/stop.svg</normaloff>../../../../../.designer/backup/imgs/stop.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>28</width>
+                 <height>28</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="config">
+               <property name="layoutDirection">
+                <enum>Qt::RightToLeft</enum>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton{
+	background-color: rgb(217, 142, 86);
+	color: #EAEAEA;
+
+}
+
+QPushButton:hover{
+	background-color: rgb(134, 87, 53);
+	color: #EAEAEA;
+}</string>
+               </property>
+               <property name="text">
+                <string>Guardar Configuracion </string>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>../../../../../.designer/backup/imgs/config.svg</normaloff>../../../../../.designer/backup/imgs/config.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>28</width>
+                 <height>28</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_2">
+         <property name="minimumSize">
+          <size>
+           <width>380</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QFrame{
+	background-color: rgb(70, 77, 95);
+}
+
+QPushButton{
+	font:87 12pt &quot;Arial Black&quot;;
+	background-color: #000000ff;
+	border-radius:5px;
+	border:1px solid white;
+}
+
+QPushButton:hover{
+	background-color: rgb(150, 150, 150);
+	border-radius:5px;
+	border:1px solid black;
+
+}
+</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0">
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>25</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="frame_5">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_4">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QToolBox" name="toolBox">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QToolBox::tab{
+	background-color: rgb(221, 221, 221);
+	border-radius: 5px;
+	color:rgb(0,0,0);
+	font:75 13pt &quot;MS Shell Dlg 2&quot;;
+}
+
+QToolBox::tab::selected{
+	background-color: #23c8c8;
+	font:75 13pt &quot;MS Shell Dlg 2&quot;;
+	color:rgb(0,0,0);
+}
+
+QLabel{
+	font:87 10pt &quot;Sans Serif&quot;;
+}</string>
+               </property>
+               <property name="currentIndex">
+                <number>1</number>
+               </property>
+               <widget class="QWidget" name="Comousarlo">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>0</y>
+                  <width>98</width>
+                  <height>91</height>
+                 </rect>
+                </property>
+                <attribute name="icon">
+                 <iconset>
+                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                </attribute>
+                <attribute name="label">
+                 <string>Instrucciones</string>
+                </attribute>
+                <layout class="QVBoxLayout" name="verticalLayout_11">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QFrame" name="frame_21">
+                   <property name="frameShape">
+                    <enum>QFrame::StyledPanel</enum>
+                   </property>
+                   <property name="frameShadow">
+                    <enum>QFrame::Raised</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_12">
+                    <item>
+                     <widget class="QTextEdit" name="textEdit"/>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+               <widget class="QWidget" name="ConfiguracionAudio">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>0</y>
+                  <width>332</width>
+                  <height>456</height>
+                 </rect>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <attribute name="icon">
+                 <iconset>
+                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                </attribute>
+                <attribute name="label">
+                 <string>Configuracion de Traduccion</string>
+                </attribute>
+                <layout class="QVBoxLayout" name="verticalLayout_9">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QFrame" name="frame_7">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QSpinBox, QDoubleSpinBox, QComboBox, QLabel,QLineEdit{
+	color:white
+}</string>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::StyledPanel</enum>
+                   </property>
+                   <property name="frameShadow">
+                    <enum>QFrame::Raised</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_8" stretch="1,0,1,1,1,1,1,1,1,1">
+                    <item>
+                     <widget class="QFrame" name="frame_9">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="text">
+                          <string>Frecuencia de muestreo (Hz):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="spinBox">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="maximum">
+                          <number>100000</number>
+                         </property>
+                         <property name="value">
+                          <number>16000</number>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_8">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_3">
+                         <property name="text">
+                          <string>Segmento de audio (ms):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="spinBox_3">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="maximum">
+                          <number>100</number>
+                         </property>
+                         <property name="value">
+                          <number>30</number>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_10">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_4">
+                         <property name="text">
+                          <string>Ventana de voz (seg):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="decimals">
+                          <number>1</number>
+                         </property>
+                         <property name="maximum">
+                          <double>3.000000000000000</double>
+                         </property>
+                         <property name="singleStep">
+                          <double>0.100000000000000</double>
+                         </property>
+                         <property name="value">
+                          <double>0.400000000000000</double>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_11">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_5">
+                         <property name="text">
+                          <string>Duración mínima de voz (seg):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="decimals">
+                          <number>1</number>
+                         </property>
+                         <property name="maximum">
+                          <double>3.000000000000000</double>
+                         </property>
+                         <property name="singleStep">
+                          <double>0.100000000000000</double>
+                         </property>
+                         <property name="value">
+                          <double>0.300000000000000</double>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_16">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_9">
+                         <property name="text">
+                          <string>Maxima duracion de audio (seg):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QDoubleSpinBox" name="doubleSpinBox">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="decimals">
+                          <number>1</number>
+                         </property>
+                         <property name="minimum">
+                          <double>1.000000000000000</double>
+                         </property>
+                         <property name="maximum">
+                          <double>15.000000000000000</double>
+                         </property>
+                         <property name="singleStep">
+                          <double>0.500000000000000</double>
+                         </property>
+                         <property name="value">
+                          <double>5.000000000000000</double>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_14">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_10">
+                         <property name="text">
+                          <string>Tiempo de contexto(seg):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="decimals">
+                          <number>1</number>
+                         </property>
+                         <property name="maximum">
+                          <double>15.000000000000000</double>
+                         </property>
+                         <property name="singleStep">
+                          <double>0.500000000000000</double>
+                         </property>
+                         <property name="value">
+                          <double>2.000000000000000</double>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_12">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <property name="lineWidth">
+                       <number>0</number>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_6">
+                         <property name="text">
+                          <string>Umbral de silencio:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="spinBox_2">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="prefix">
+                          <string/>
+                         </property>
+                         <property name="maximum">
+                          <number>5000</number>
+                         </property>
+                         <property name="value">
+                          <number>500</number>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_25">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_19" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_17">
+                         <property name="text">
+                          <string>Microfono:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="comboBox_4">
+                         <item>
+                          <property name="text">
+                           <string>Mic 1</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Mic 2</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>MIc 3</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_15">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_12" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_8">
+                         <property name="text">
+                          <string>Archivos temporales:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="lineEdit">
+                         <property name="text">
+                          <string>./temp</string>
+                         </property>
+                         <property name="placeholderText">
+                          <string>Hola</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_13">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_7">
+                         <property name="text">
+                          <string>Modelo de traduccion:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="comboBox">
+                         <property name="frame">
+                          <bool>true</bool>
+                         </property>
+                         <item>
+                          <property name="text">
+                           <string>Tiny</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Base</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Small</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Medium</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Large</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+               <widget class="QWidget" name="ConfiguracionTexto">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>0</y>
+                  <width>249</width>
+                  <height>283</height>
+                 </rect>
+                </property>
+                <attribute name="icon">
+                 <iconset>
+                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                </attribute>
+                <attribute name="label">
+                 <string>Configuracion Texto</string>
+                </attribute>
+                <layout class="QVBoxLayout" name="verticalLayout_7">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QFrame" name="frame_17">
+                   <property name="styleSheet">
+                    <string notr="true">QSpinBox, QDoubleSpinBox, QComboBox, QLabel,QLineEdit{
+	color:white
+}</string>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::StyledPanel</enum>
+                   </property>
+                   <property name="frameShadow">
+                    <enum>QFrame::Raised</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_10">
+                    <item>
+                     <widget class="QFrame" name="frame_18">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="2,1">
+                       <property name="spacing">
+                        <number>6</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>9</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>9</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>9</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="label_11">
+                         <property name="text">
+                          <string>Tipo de fuente:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="comboBox_3">
+                         <property name="minimumSize">
+                          <size>
+                           <width>0</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="frame">
+                          <bool>false</bool>
+                         </property>
+                         <item>
+                          <property name="text">
+                           <string>Arial</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Times New Roman</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Courier New</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Verdana</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Tahoma</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Helvetica</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Sans Serif</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Monospace</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Comic Sans</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_19">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_12">
+                         <property name="text">
+                          <string>Tamaño de fuente:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="spinBox_4">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_20">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_13" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_13">
+                         <property name="text">
+                          <string>Estilo de fuente:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="comboBox_2">
+                         <property name="minimumSize">
+                          <size>
+                           <width>40</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <item>
+                          <property name="text">
+                           <string>Bold</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Italic</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Underline</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_22">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_15">
+                         <property name="text">
+                          <string>Grosor del borde:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="spinBox_5">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_23">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_14">
+                         <property name="text">
+                          <string>Color de fondo:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QPushButton" name="pushButton">
+                         <property name="text">
+                          <string>Color</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_24">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_16">
+                         <property name="text">
+                          <string>Opacidad del fondo:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="spinBox_6">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="frame_3">
+         <property name="styleSheet">
+          <string notr="true">QFrame{
+	background-color: rgb(70, 77, 95);
+}
+
+
+QLabel{
+	font: 87 12pt &quot;Sans Serif&quot;;
+	background-color: #000000ff;
+	color: white;
+	font-weight:bold;
+}</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1,14">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>9</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="rightMargin">
+           <number>15</number>
+          </property>
+          <property name="bottomMargin">
+           <number>20</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="frame_6">
+            <property name="styleSheet">
+             <string notr="true">QTextBrrowser{
+	font:87 10pt &quot;Sans Serif&quot;;
+}
+</string>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_20">
+             <item>
+              <widget class="QLabel" name="label_18">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="text">
+                <string>Tradcuccion en tiempo real</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextEdit" name="Consola">
+            <property name="styleSheet">
+             <string notr="true">QTextEdit{
+	background-color: rgb(255,255,255);
+	color: rgb(0, 0, 0)
+}</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="html">
+             <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="placeholderText">
+             <string>Texto de ejemplo</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -25,6 +25,7 @@ def transcribe_and_translate(audio_file):
         
         # Detecta el idioma de la transcripción
         detected_language = result['language']
+        print(detected_language)
 
         # Segmentación del texto usando spaCy según el idioma detectado
         if detected_language == "es":
@@ -56,14 +57,19 @@ def transcribe_and_translate(audio_file):
         print(f"Error al transcribir o traducir: {e}")
         return None
 
-def process_audio(audio_file):
-    config.translated_text = transcribe_and_translate(audio_file)
-    if config.translated_text:
-        print(f"Texto traducido: {config.translated_text}")
+def process_audio(audio_file, translator):
     try:
-        os.remove(audio_file)
+        config.translated_text = transcribe_and_translate(audio_file)
+        if config.translated_text:
+            print(f"Texto traducido: {config.translated_text}")
+            translator.update_translated_text()
     except Exception as e:
-        print(f"Error al eliminar archivo: {e}")
+        print(f"Error en el procesamiento de audio: {e}")
+    finally:
+        try:
+            os.remove(audio_file)
+        except Exception as e:
+            print(f"Error al eliminar archivo: {e}")
 
 
 

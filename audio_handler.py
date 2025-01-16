@@ -7,6 +7,7 @@ import threading
 import config
 import time
 from speech_processing import process_audio  # Asegúrate de importar process_audio
+from PyQt5.QtCore import QThread, pyqtSignal
 
 audio = pyaudio.PyAudio()
 stream = audio.open(format=pyaudio.paInt16,
@@ -22,6 +23,19 @@ is_speaking = False
 silence_counter = 0
 lock = threading.Lock()
 recording_active = True
+
+class AudioProcessingThread(QThread):
+    finished_processing = pyqtSignal(str)  # Señal para indicar que el procesamiento ha terminado
+
+    def __init__(self, audio_file, translator):
+        super().__init__()
+        self.audio_file = audio_file
+        self.translator = translator
+
+    def run(self):
+        # Llama a la función de procesamiento de audio
+        translated_text = process_audio(self.audio_file, self.translator)
+        self.finished_processing.emit(translated_text)  # Emitir la señal con el texto traducido
 
 def save_temp_audio(frames):
     temp_dir = config.TEMP_DIR
@@ -41,7 +55,7 @@ def is_loud_enough(frame, threshold=config.THRESHOLD):
     avg_volume = np.abs(audio_data).mean()
     return avg_volume > threshold
 
-def record_audio():
+def record_audio(translator,app_instance):
     global audio_buffer, is_speaking, silence_counter
     global start_time, recording_active
 
@@ -69,8 +83,11 @@ def record_audio():
                     cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
                     temp_audio = audio_buffer[-cut_index:]  # Toma solo los últimos 2 segundos
                     temp_file = save_temp_audio(temp_audio)
-                    threading.Thread(target=process_audio, args=(temp_file,)).start()
-                    audio_buffer = []  # Resetea el buffer
+                    # Usar QThread para el procesamiento de audio
+                    audio_thread = AudioProcessingThread(temp_file, translator)
+                    audio_thread.finished_processing.connect(app_instance.update_text_edit)  # Conectar a la función de actualización
+                    audio_thread.start()
+                    audio_buffer = []
                 is_speaking = False
                 start_time = time.time()  # Reinicia el temporizador
 
@@ -84,7 +101,10 @@ def record_audio():
                         cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
                         temp_audio = audio_buffer[-cut_index:]  # Toma solo los últimos 2 segundos
                         temp_file = save_temp_audio(temp_audio)
-                    threading.Thread(target=process_audio, args=(temp_file,)).start()
+                    # Usar QThread para el procesamiento de audio
+                    audio_thread = AudioProcessingThread(temp_file, translator)
+                    audio_thread.finished_processing.connect(app_instance.update_text_edit)  # Conectar a la función de actualización
+                    audio_thread.start()
 
                 # Resetea el buffer y el estado de grabación
                 with lock:
@@ -101,6 +121,7 @@ def record_audio():
                 start_time = time.time()  # Reinicia el tiempo para una nueva grabación
 
 def stop_recording():
-    global recording_active
+    global recording_active, audio_buffer
     recording_active = False
+    audio_buffer = []
     print("Deteniendo la grabación...")
