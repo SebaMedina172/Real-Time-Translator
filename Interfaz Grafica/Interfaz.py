@@ -7,8 +7,9 @@ print(os.path.abspath(os.path.dirname(__file__)))
 import threading
 import time
 from PyQt5 import QtWidgets, uic, QtCore, QtGui  # Cambia a PyQt6 si lo estás usando.
-from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSignal, QObject, QThread  # Para manejar flags de maximizar/restaurar.
-from PyQt5.QtGui import QMouseEvent, QCursor, QIcon
+from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSignal, QObject, QThread, QTimer  # Para manejar flags de maximizar/restaurar.
+from PyQt5.QtGui import QMouseEvent, QCursor, QIcon, QTextCursor 
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy 
 import config
 from audio_handler import record_audio, stop_recording
 from speech_processing import process_audio
@@ -37,6 +38,10 @@ class MainApp(QtWidgets.QMainWindow):
         # Carga el archivo .ui
         uic.loadUi("RTT.ui", self)
 
+        # print(self.Consola)  # Esto debería imprimir información sobre el QScrollArea
+        # Agregar un mensaje de prueba
+        # self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
+
         # Ocultar Rarrow al inicio
         self.Rarrow.hide()
         #Sacarle los iconos a los botones
@@ -44,10 +49,17 @@ class MainApp(QtWidgets.QMainWindow):
         self.pause.setIcon(QIcon())
         self.config.setIcon(QIcon())
 
+        self.messages_layout = QVBoxLayout(self.messages_container)  # Usar layout en el contenedor
+        self.messages_layout.setAlignment(Qt.AlignBottom)  # Alinear mensajes en la parte inferior
+        self.messages_layout.setSpacing(10)  # Separación entre mensajes
+
         # Aquí puedes conectar señales y slots.
         self.init_ui()
         self.translator = Translator()
         self.translator.text_changed.connect(self.update_text_edit)
+
+        # Agregar un mensaje de prueba
+        self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
 
     def init_ui(self):
         # Ejemplo: Conectar un botón (ajusta los nombres de los objetos según tu diseño).
@@ -77,9 +89,9 @@ class MainApp(QtWidgets.QMainWindow):
         self.play.setText("") 
         self.pause.setText("")
         self.config.setText("")
-        self.play.setIcon(QIcon("./imgs/play.svg"))
-        self.pause.setIcon(QIcon("./imgs/stop.svg"))
-        self.config.setIcon(QIcon("./imgs/config.svg"))
+        self.play.setIcon(QIcon("./imgs/play_white.svg"))
+        self.pause.setIcon(QIcon("./imgs/stop_white.svg"))
+        self.config.setIcon(QIcon("./imgs/config_white.svg"))
 
         self.Larrow.hide()  # Ocultar Larrow
         self.Rarrow.show()  # Mostrar Rarrow
@@ -102,7 +114,7 @@ class MainApp(QtWidgets.QMainWindow):
     
     #Iniciar Traduccion
     def start_translation(self):
-        if not recording_active:
+        if not config.recording_active:
             print("Iniciando traducción...")
             config.recording_active = True 
             print(config.recording_active) 
@@ -111,6 +123,8 @@ class MainApp(QtWidgets.QMainWindow):
             # self.recording_thread.daemon = True
             self.recording_thread = AudioRecordingThread(self.translator, self)
             self.recording_thread.start()
+
+            self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
         else:
             print("La grabación ya está activa.")
 
@@ -123,14 +137,31 @@ class MainApp(QtWidgets.QMainWindow):
         config.recording_active = False  # Asegúrate de que recording_active se establezca en False
 
     def update_text_edit(self, new_text):
-        current_text = self.Consola.toPlainText()  # Obtiene el texto actual
-        if current_text:
-            self.Consola.setPlainText(current_text + "\n" + new_text)  # Agrega el nuevo texto
-        else:
-            self.Consola.setPlainText(new_text)  # Si está vacío, solo establece el nuevo texto
+        print(f"Actualizando texto: {new_text}")  # Mensaje de depuración
 
-        # Desplazar el cursor al final del QTextEdit
-        self.Consola.moveCursor(QtGui.QTextCursor.End)  
+        # Crear un nuevo mensaje con estilo fijo
+        new_message = QLabel(new_text)
+        new_message.setFixedHeight(50)  # Establecer una altura fija para cada etiqueta
+        new_message.setWordWrap(True)  # Permitir el ajuste de línea
+        new_message.setStyleSheet("""
+            background-color: rgb(231, 231, 231);
+            border: 2px solid black;
+            border-radius: 5px;
+            padding: 2px;
+            color: black
+        """)
+        new_message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Ancho expansible, altura fija
+
+        # Añadir mensaje al layout
+        self.messages_layout.addWidget(new_message)
+
+        # Desplazar automáticamente hacia el mensaje más nuevo
+        QTimer.singleShot(10, self.scroll_to_bottom)
+
+    def scroll_to_bottom(self):
+        """Posiciona el scroll en la parte inferior."""
+        scrollbar = self.Consola.verticalScrollBar()  # Accede a la barra de desplazamiento del QScrollArea
+        scrollbar.setValue(scrollbar.maximum())  # Desplaza hacia el final
 
     #Guardar Configuracion
     def save_config(self):

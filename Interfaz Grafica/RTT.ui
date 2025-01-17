@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>918</width>
-    <height>523</height>
+    <width>1143</width>
+    <height>497</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -131,7 +131,7 @@ QPushButton:hover{
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>../../../../../.designer/backup/imgs/left arrow.svg</normaloff>../../../../../.designer/backup/imgs/left arrow.svg</iconset>
+                 <normaloff>imgs/left_arrow_white.svg</normaloff>imgs/left_arrow_white.svg</iconset>
                </property>
               </widget>
              </item>
@@ -142,7 +142,7 @@ QPushButton:hover{
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>../../../../../.designer/backup/imgs/right arrow.svg</normaloff>../../../../../.designer/backup/imgs/right arrow.svg</iconset>
+                 <normaloff>imgs/rigt_arrow_white.svg</normaloff>imgs/rigt_arrow_white.svg</iconset>
                </property>
               </widget>
              </item>
@@ -252,7 +252,7 @@ QPushButton:hover{
         </widget>
        </item>
        <item>
-        <widget class="QFrame" name="frame_2">
+        <widget class="QFrame" name="column_2">
          <property name="minimumSize">
           <size>
            <width>380</width>
@@ -349,20 +349,20 @@ QLabel{
 }</string>
                </property>
                <property name="currentIndex">
-                <number>1</number>
+                <number>2</number>
                </property>
                <widget class="QWidget" name="Comousarlo">
                 <property name="geometry">
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>98</width>
-                  <height>91</height>
+                  <width>415</width>
+                  <height>357</height>
                  </rect>
                 </property>
                 <attribute name="icon">
                  <iconset>
-                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                  <normaloff>imgs/toolbox.svg</normaloff>imgs/toolbox.svg</iconset>
                 </attribute>
                 <attribute name="label">
                  <string>Instrucciones</string>
@@ -405,7 +405,7 @@ QLabel{
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>332</width>
+                  <width>398</width>
                   <height>456</height>
                  </rect>
                 </property>
@@ -417,7 +417,7 @@ QLabel{
                 </property>
                 <attribute name="icon">
                  <iconset>
-                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                  <normaloff>imgs/toolbox.svg</normaloff>imgs/toolbox.svg</iconset>
                 </attribute>
                 <attribute name="label">
                  <string>Configuracion de Traduccion</string>
@@ -849,13 +849,13 @@ QLabel{
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>249</width>
-                  <height>283</height>
+                  <width>415</width>
+                  <height>357</height>
                  </rect>
                 </property>
                 <attribute name="icon">
                  <iconset>
-                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                  <normaloff>imgs/toolbox.svg</normaloff>imgs/toolbox.svg</iconset>
                 </attribute>
                 <attribute name="label">
                  <string>Configuracion Texto</string>
@@ -1141,19 +1141,13 @@ QLabel{
         </widget>
        </item>
        <item>
-        <widget class="QFrame" name="frame_3">
+        <widget class="QFrame" name="column_3">
          <property name="styleSheet">
           <string notr="true">QFrame{
 	background-color: rgb(70, 77, 95);
 }
 
-
-QLabel{
-	font: 87 12pt &quot;Sans Serif&quot;;
-	background-color: #000000ff;
-	color: white;
-	font-weight:bold;
-}</string>
+</string>
          </property>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
@@ -1161,7 +1155,7 @@ QLabel{
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1,14">
+         <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1">
           <property name="spacing">
            <number>0</number>
           </property>
@@ -1180,9 +1174,7 @@ QLabel{
           <item>
            <widget class="QFrame" name="frame_6">
             <property name="styleSheet">
-             <string notr="true">QTextBrrowser{
-	font:87 10pt &quot;Sans Serif&quot;;
-}
+             <string notr="true">
 </string>
             </property>
             <property name="frameShape">
@@ -1191,9 +1183,9 @@ QLabel{
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_20">
+            <layout class="QVBoxLayout" name="verticalLayout_6">
              <item>
-              <widget class="QLabel" name="label_18">
+              <widget class="QLabel" name="title_console">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                  <horstretch>0</horstretch>
@@ -1207,37 +1199,72 @@ QLabel{
                 </size>
                </property>
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">QLabel{
+font: 87 12pt &quot;Sans Serif&quot;;
+background-color: #000000ff;
+color: white;
+font-weight:bold;
+}</string>
                </property>
                <property name="text">
                 <string>Tradcuccion en tiempo real</string>
                </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QScrollArea" name="Consola">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="widgetResizable">
+                <bool>true</bool>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <widget class="QWidget" name="scrollAreaWidgetContents">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>0</y>
+                  <width>397</width>
+                  <height>416</height>
+                 </rect>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_3">
+                 <property name="spacing">
+                  <number>0</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QWidget" name="messages_container" native="true">
+                   <property name="styleSheet">
+                    <string notr="true">background-color: rgb(204, 204, 204);</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
               </widget>
              </item>
             </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QTextEdit" name="Consola">
-            <property name="styleSheet">
-             <string notr="true">QTextEdit{
-	background-color: rgb(255,255,255);
-	color: rgb(0, 0, 0)
-}</string>
-            </property>
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-            <property name="html">
-             <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="placeholderText">
-             <string>Texto de ejemplo</string>
-            </property>
            </widget>
           </item>
          </layout>
