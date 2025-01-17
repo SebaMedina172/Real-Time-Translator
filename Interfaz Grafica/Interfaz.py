@@ -13,8 +13,6 @@ import config
 from audio_handler import record_audio, stop_recording
 from speech_processing import process_audio
 
-recording_active = False  # Inicializa en False
-
 class Translator(QObject):
     text_changed = pyqtSignal(str)
 
@@ -104,29 +102,25 @@ class MainApp(QtWidgets.QMainWindow):
     
     #Iniciar Traduccion
     def start_translation(self):
-        global recording_active
         if not recording_active:
             print("Iniciando traducción...")
-            recording_active = True  
+            config.recording_active = True 
+            print(config.recording_active) 
             # Iniciar el hilo de grabación
             # self.recording_thread = threading.Thread(target=self.start_recording)
             # self.recording_thread.daemon = True
             self.recording_thread = AudioRecordingThread(self.translator, self)
             self.recording_thread.start()
-            self.recording_thread.start()
         else:
             print("La grabación ya está activa.")
 
-    def start_recording(self):
-        record_audio(self.translator, self)  # Llama a la función de grabación y pasa la instancia de Translator
     
     #Frenar Traduccion
     def stop_translation(self):
         stop_recording()  # Detiene la grabación
         print("Parando traducción...")
         # Reiniciar el estado de las variables
-        global recording_active
-        recording_active = False  # Asegúrate de que recording_active se establezca en False
+        config.recording_active = False  # Asegúrate de que recording_active se establezca en False
 
     def update_text_edit(self, new_text):
         current_text = self.Consola.toPlainText()  # Obtiene el texto actual

@@ -22,7 +22,6 @@ audio_buffer = []
 is_speaking = False
 silence_counter = 0
 lock = threading.Lock()
-recording_active = True
 
 class AudioProcessingThread(QThread):
     finished_processing = pyqtSignal(str)  # Señal para indicar que el procesamiento ha terminado
@@ -57,15 +56,28 @@ def is_loud_enough(frame, threshold=config.THRESHOLD):
 
 def record_audio(translator,app_instance):
     global audio_buffer, is_speaking, silence_counter
-    global start_time, recording_active
+    global start_time
 
+    # Reiniciar el flujo de audio
+    global stream
+    stream.stop_stream()  # Detener el flujo de audio si está activo
+    stream.close()  # Cerrar el flujo de audio
+    stream = audio.open(format=pyaudio.paInt16,
+                        channels=1,
+                        rate=config.RATE,
+                        input=True,
+                        frames_per_buffer=config.CHUNK)
+
+    print("Iniciando grabación...")  # Mensaje de depuración
     start_time = time.time()  # Inicializa start_time al principio de la función
 
-    while recording_active:
+    while config.recording_active:
+        print("Grabando...")  # Mensaje de depuración
         frame = stream.read(config.CHUNK, exception_on_overflow=False)
         try:
             # Detecta si es voz o si el volumen es lo suficientemente alto
             is_voice = vad.is_speech(frame, config.RATE) or is_loud_enough(frame)
+            print(f"¿Es voz? {is_voice}")  # Mensaje de depuración
         except webrtcvad.Error as e:
             print(f"Error en VAD: {e}")
             continue
@@ -119,9 +131,12 @@ def record_audio(translator,app_instance):
                 # Si ha pasado el tiempo máximo sin voz, resetea el contador
                 silence_counter = 0
                 start_time = time.time()  # Reinicia el tiempo para una nueva grabación
+        print("Grabación detenida.")  # Mensaje de depuración al finalizar
 
 def stop_recording():
-    global recording_active, audio_buffer
-    recording_active = False
+    global audio_buffer
+    config.recording_active = False
     audio_buffer = []
     print("Deteniendo la grabación...")
+    stream.stop_stream()  # Detener el flujo de audio
+    stream.close()  # Cerrar el flujo de audio

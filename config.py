@@ -1,4 +1,5 @@
 translated_text = "Texto Default"
+recording_active = False  # Inicializa en False
 
 # Configuración de audio
 RATE = 16000
