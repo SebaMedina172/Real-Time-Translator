@@ -349,7 +349,7 @@ QLabel{
 }</string>
                </property>
                <property name="currentIndex">
-                <number>2</number>
+                <number>1</number>
                </property>
                <widget class="QWidget" name="Comousarlo">
                 <property name="geometry">
@@ -404,7 +404,7 @@ QLabel{
                 <property name="geometry">
                  <rect>
                   <x>0</x>
-                  <y>0</y>
+                  <y>-99</y>
                   <width>398</width>
                   <height>456</height>
                  </rect>
@@ -729,7 +729,7 @@ QLabel{
                       <property name="frameShadow">
                        <enum>QFrame::Raised</enum>
                       </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_19" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_19" stretch="1,2">
                        <item>
                         <widget class="QLabel" name="label_17">
                          <property name="text">
@@ -738,23 +738,7 @@ QLabel{
                         </widget>
                        </item>
                        <item>
-                        <widget class="QComboBox" name="comboBox_4">
-                         <item>
-                          <property name="text">
-                           <string>Mic 1</string>
-                          </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Mic 2</string>
-                          </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>MIc 3</string>
-                          </property>
-                         </item>
-                        </widget>
+                        <widget class="QComboBox" name="microphoneComboBox"/>
                        </item>
                       </layout>
                      </widget>
@@ -1174,8 +1158,7 @@ QLabel{
           <item>
            <widget class="QFrame" name="frame_6">
             <property name="styleSheet">
-             <string notr="true">
-</string>
+             <string notr="true"/>
             </property>
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>

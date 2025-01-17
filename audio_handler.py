@@ -54,7 +54,7 @@ def is_loud_enough(frame, threshold=config.THRESHOLD):
     avg_volume = np.abs(audio_data).mean()
     return avg_volume > threshold
 
-def record_audio(translator,app_instance):
+def record_audio(translator,app_instance,mic_index):
     global audio_buffer, is_speaking, silence_counter
     global start_time
 
@@ -62,11 +62,18 @@ def record_audio(translator,app_instance):
     global stream
     stream.stop_stream()  # Detener el flujo de audio si está activo
     stream.close()  # Cerrar el flujo de audio
+
+    # Obtener información del dispositivo
+    p = pyaudio.PyAudio()
+    device_info = p.get_device_info_by_index(mic_index)
+    print(f"Dispositivo seleccionado: {device_info['name']}, Canales: {device_info['maxInputChannels']}")
+
     stream = audio.open(format=pyaudio.paInt16,
-                        channels=1,
+                        channels=2,
                         rate=config.RATE,
                         input=True,
-                        frames_per_buffer=config.CHUNK)
+                        frames_per_buffer=config.CHUNK,
+                        input_device_index=mic_index)
 
     print("Iniciando grabación...")  # Mensaje de depuración
     start_time = time.time()  # Inicializa start_time al principio de la función

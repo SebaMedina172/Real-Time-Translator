@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushBut
 import config
 from audio_handler import record_audio, stop_recording
 from speech_processing import process_audio
+import pyaudio
 
 class Translator(QObject):
     text_changed = pyqtSignal(str)
@@ -26,13 +27,14 @@ class Translator(QObject):
             self.text_changed.emit(config.translated_text)
 
 class AudioRecordingThread(QThread):
-    def __init__(self, translator, app_instance):
+    def __init__(self, translator, app_instance, mic_index):
         super().__init__()
         self.translator = translator
         self.app_instance = app_instance
+        self.mic_index = mic_index  # Guardar el índice del micrófono
 
     def run(self):
-        record_audio(self.translator, self.app_instance)
+        record_audio(self.translator, self.app_instance,self.mic_index)
 
 class MainApp(QtWidgets.QMainWindow):
     def __init__(self):
@@ -60,8 +62,28 @@ class MainApp(QtWidgets.QMainWindow):
         self.translator = Translator()
         self.translator.text_changed.connect(self.update_text_edit)
 
+        # Llenar el QComboBox con los micrófonos disponibles
+        self.populate_microphone_list()
+
         # # Agregar un mensaje de prueba
         # self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
+
+    def populate_microphone_list(self):
+        """Llena el QComboBox con los micrófonos disponibles."""
+        p = pyaudio.PyAudio()
+        microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
+        microphone_combo_box.clear()  # Limpiar elementos anteriores
+
+        for i in range(p.get_device_count()):
+            device_info = p.get_device_info_by_index(i)
+            
+            # Solo agregar dispositivos de entrada con al menos 1 canal
+            if device_info['maxInputChannels'] > 0:
+                print(f"Dispositivo {i}: {device_info['name']}, Canales: {device_info['maxInputChannels']}")  # Imprimir información del dispositivo
+                microphone_combo_box.addItem(device_info['name'])
+                microphone_combo_box.setItemData(microphone_combo_box.count() - 1, device_info['name'], Qt.ToolTipRole)  # Agregar tooltip
+
+        p.terminate()
 
     def init_ui(self):
         # Ejemplo: Conectar un botón (ajusta los nombres de los objetos según tu diseño).
@@ -123,8 +145,12 @@ class MainApp(QtWidgets.QMainWindow):
             # Iniciar el hilo de grabación
             # self.recording_thread = threading.Thread(target=self.start_recording)
             # self.recording_thread.daemon = True
-            self.recording_thread = AudioRecordingThread(self.translator, self)
-            self.recording_thread.start()
+
+            # Obtener el índice del micrófono seleccionado
+            mic_index = self.findChild(QtWidgets.QComboBox, "microphoneComboBox").currentIndex()
+
+            self.recording_thread = AudioRecordingThread(self.translator, self, mic_index)
+            self.recording_thread.start(mic_index)
 
             self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
         else:
