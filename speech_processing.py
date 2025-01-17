@@ -59,10 +59,13 @@ def transcribe_and_translate(audio_file):
 
 def process_audio(audio_file, translator):
     try:
-        config.translated_text = transcribe_and_translate(audio_file)
-        if config.translated_text:
+        translated_text = transcribe_and_translate(audio_file)
+        if translated_text:  # Solo actualiza si hay texto traducido
+            config.translated_text = translated_text
             print(f"Texto traducido: {config.translated_text}")
             translator.update_translated_text()
+        else:
+            print("No se actualiza el texto traducido porque está vacío.")
     except Exception as e:
         print(f"Error en el procesamiento de audio: {e}")
     finally:

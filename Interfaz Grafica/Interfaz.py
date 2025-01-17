@@ -21,7 +21,9 @@ class Translator(QObject):
         super().__init__()
 
     def update_translated_text(self):
-        self.text_changed.emit(config.translated_text)
+        print(f"Emitiendo texto traducido: '{config.translated_text}'")  # Mensaje de depuración
+        if config.translated_text:  # Solo emite si hay texto
+            self.text_changed.emit(config.translated_text)
 
 class AudioRecordingThread(QThread):
     def __init__(self, translator, app_instance):
@@ -58,8 +60,8 @@ class MainApp(QtWidgets.QMainWindow):
         self.translator = Translator()
         self.translator.text_changed.connect(self.update_text_edit)
 
-        # Agregar un mensaje de prueba
-        self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
+        # # Agregar un mensaje de prueba
+        # self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
 
     def init_ui(self):
         # Ejemplo: Conectar un botón (ajusta los nombres de los objetos según tu diseño).
@@ -140,23 +142,24 @@ class MainApp(QtWidgets.QMainWindow):
         print(f"Actualizando texto: {new_text}")  # Mensaje de depuración
 
         # Crear un nuevo mensaje con estilo fijo
-        new_message = QLabel(new_text)
-        new_message.setFixedHeight(50)  # Establecer una altura fija para cada etiqueta
-        new_message.setWordWrap(True)  # Permitir el ajuste de línea
-        new_message.setStyleSheet("""
-            background-color: rgb(231, 231, 231);
-            border: 2px solid black;
-            border-radius: 5px;
-            padding: 2px;
-            color: black
-        """)
-        new_message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Ancho expansible, altura fija
+        if new_text:
+            new_message = QLabel(new_text)
+            new_message.setFixedHeight(50)  # Establecer una altura fija para cada etiqueta
+            new_message.setWordWrap(True)  # Permitir el ajuste de línea
+            new_message.setStyleSheet("""
+                background-color: rgb(231, 231, 231);
+                border: 2px solid black;
+                border-radius: 5px;
+                padding: 2px;
+                color: black
+            """)
+            new_message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Ancho expansible, altura fija
 
-        # Añadir mensaje al layout
-        self.messages_layout.addWidget(new_message)
+            # Añadir mensaje al layout
+            self.messages_layout.addWidget(new_message)
 
-        # Desplazar automáticamente hacia el mensaje más nuevo
-        QTimer.singleShot(10, self.scroll_to_bottom)
+            # Desplazar automáticamente hacia el mensaje más nuevo
+            QTimer.singleShot(10, self.scroll_to_bottom)
 
     def scroll_to_bottom(self):
         """Posiciona el scroll en la parte inferior."""
