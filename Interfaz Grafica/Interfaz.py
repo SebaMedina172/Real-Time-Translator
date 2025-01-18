@@ -14,6 +14,8 @@ import config
 from audio_handler import record_audio, stop_recording
 from speech_processing import process_audio
 import pyaudio
+import sounddevice as sd
+
 
 class Translator(QObject):
     text_changed = pyqtSignal(str)
@@ -74,22 +76,58 @@ class MainApp(QtWidgets.QMainWindow):
         microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
         microphone_combo_box.clear()  # Limpiar elementos anteriores
 
+        valid_microphones = []  # Lista para almacenar micrófonos válidos
+        latency_threshold = 0.1  # Umbral de latencia en segundos
+
         for i in range(p.get_device_count()):
             device_info = p.get_device_info_by_index(i)
-            
-            # Solo agregar dispositivos de entrada con al menos 1 canal
-            if device_info['maxInputChannels'] > 0:
-                print(f"Dispositivo {i}: {device_info['name']}, Canales: {device_info['maxInputChannels']}")  # Imprimir información del dispositivo
-                microphone_combo_box.addItem(device_info['name'])
-                microphone_combo_box.setItemData(microphone_combo_box.count() - 1, device_info['name'], Qt.ToolTipRole)  # Agregar tooltip
+            name = device_info['name']
+            max_input_channels = device_info['maxInputChannels']
+            default_sample_rate = device_info['defaultSampleRate']
+            default_low_input_latency = device_info['defaultLowInputLatency']
+            default_high_input_latency = device_info['defaultHighInputLatency']
 
-        p.terminate()
+            # Solo considerar dispositivos de entrada con al menos 1 canal
+            if max_input_channels > 0:
+                try:
+                    # Intentar abrir un flujo de prueba
+                    stream = p.open(format=pyaudio.paInt16,
+                                    channels=1,
+                                    rate=int(default_sample_rate),
+                                    input=True,
+                                    input_device_index=i)
+                    stream.close()  # Si funciona, lo cerramos inmediatamente
+                    print(f"Dispositivo válido: {name}, Canales: {max_input_channels}, "
+                        f"Tasa de muestreo: {default_sample_rate}, "
+                        f"Latencia baja: {default_low_input_latency}, "
+                        f"Latencia alta: {default_high_input_latency}")
+
+                    # Filtrar dispositivos por latencia
+                    if default_low_input_latency <= latency_threshold and \
+                    default_high_input_latency <= latency_threshold:
+                        valid_microphones.append((i, name))  # Agregar a la lista de micrófonos válidos
+                    else:
+                        print(f"Dispositivo omitido por latencia: {name}")
+
+                except Exception as e:
+                    print(f"Error al abrir el dispositivo ({name}): {e}")
+                    print(f"Detalles del dispositivo: {device_info}")  # Imprimir detalles del dispositivo
+
+        # Agregar los micrófonos válidos al QComboBox
+        for index, name in valid_microphones:
+            microphone_combo_box.addItem(name)
+
+        p.terminate()  # Terminar PyAudio
+
+
 
     def init_ui(self):
         # Ejemplo: Conectar un botón (ajusta los nombres de los objetos según tu diseño).
         self.findChild(QtWidgets.QPushButton, "play").clicked.connect(self.start_translation)
         self.findChild(QtWidgets.QPushButton, "pause").clicked.connect(self.stop_translation)
         self.findChild(QtWidgets.QPushButton, "config").clicked.connect(self.save_config)
+  
+        
 
 
         #Botones para la compresion de los botones
@@ -142,17 +180,33 @@ class MainApp(QtWidgets.QMainWindow):
             print("Iniciando traducción...")
             config.recording_active = True 
             print(config.recording_active) 
-            # Iniciar el hilo de grabación
-            # self.recording_thread = threading.Thread(target=self.start_recording)
-            # self.recording_thread.daemon = True
 
             # Obtener el índice del micrófono seleccionado
             mic_index = self.findChild(QtWidgets.QComboBox, "microphoneComboBox").currentIndex()
 
-            self.recording_thread = AudioRecordingThread(self.translator, self, mic_index)
-            self.recording_thread.start(mic_index)
+            try:
+                # Intentar iniciar la grabación con el micrófono seleccionado
+                self.recording_thread = AudioRecordingThread(self.translator, self, mic_index)
+                self.recording_thread.start()
 
-            self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
+                # Actualizar la interfaz
+                self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
+            except Exception as e:
+                print(f"Error al intentar grabar con el micrófono: {e}")
+
+                # Si ocurre un error, eliminar el dispositivo del QComboBox
+                microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
+                current_item = microphone_combo_box.currentText()
+                print(f"Error con el micrófono: {current_item}")
+
+                # Eliminar el micrófono problemático de la lista
+                microphone_combo_box.removeItem(microphone_combo_box.currentIndex())
+
+                # Mostrar un mensaje al usuario para que seleccione otro dispositivo
+                self.update_text_edit(f"El micrófono '{current_item}' causó un error. Por favor, elige otro.")
+
+                # Establecer recording_active como False para evitar bloqueos
+                config.recording_active = False
         else:
             print("La grabación ya está activa.")
 

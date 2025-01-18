@@ -69,7 +69,7 @@ def record_audio(translator,app_instance,mic_index):
     print(f"Dispositivo seleccionado: {device_info['name']}, Canales: {device_info['maxInputChannels']}")
 
     stream = audio.open(format=pyaudio.paInt16,
-                        channels=2,
+                        channels=1,
                         rate=config.RATE,
                         input=True,
                         frames_per_buffer=config.CHUNK,
