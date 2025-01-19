@@ -355,10 +355,13 @@ class MainApp(QtWidgets.QMainWindow):
         self.messages_container.setGraphicsEffect(None)
 
         # Aplicar opacidad usando un efecto de sombra
-        if opacity < 1.0:
+        if opacity < 1.0:  # Solo aplicar si la opacidad es menor que 1
             shadow_effect = QtWidgets.QGraphicsOpacityEffect()
             shadow_effect.setOpacity(opacity)  # Establecer la opacidad
             self.messages_container.setGraphicsEffect(shadow_effect)  # Aplicar el efecto al contenedor
+        elif opacity == 1.0:
+            # Si la opacidad es 1.0, asegurarse de que no haya efecto gráfico
+            self.messages_container.setGraphicsEffect(None)
 
     #Funcion para extraer el color correctamente
     def extract_color(self, style):
@@ -436,10 +439,17 @@ class MainApp(QtWidgets.QMainWindow):
         opacity = self.findChild(QtWidgets.QDoubleSpinBox, "opacity_bg_console").value()
         print(f"Opacidad del fondo de la consola actualizada a: {opacity}")  # Mensaje de depuración
 
+        # Eliminar cualquier efecto gráfico existente
+        self.messages_container.setGraphicsEffect(None)
+
         # Aplicar opacidad usando un efecto de sombra
-        shadow_effect = QtWidgets.QGraphicsOpacityEffect()
-        shadow_effect.setOpacity(opacity)  # Establecer la opacidad
-        self.messages_container.setGraphicsEffect(shadow_effect)  # Aplicar el efecto al contenedor
+        if opacity < 1.0:
+            shadow_effect = QtWidgets.QGraphicsOpacityEffect()
+            shadow_effect.setOpacity(opacity)  # Establecer la opacidad
+            self.messages_container.setGraphicsEffect(shadow_effect)  # Aplicar el efecto al contenedor
+        else:
+            # Si la opacidad es 1.0, asegurarse de que no haya efecto gráfico
+            self.messages_container.setGraphicsEffect(None)
 
     def select_bg_color_console(self):
         """Selecciona el color del fondo de la consola."""

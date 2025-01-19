@@ -6,6 +6,6 @@
     "stroke_border": 2,
     "color_border_msg": "#000000",
     "color_bg_msg": "#ffffff",
-    "opacity_bg_console": 0.3,
-    "color_bg_console": "#464d5f"
+    "opacity_bg_console": 1.0,
+    "color_bg_console": "#ffff7f"
 }
