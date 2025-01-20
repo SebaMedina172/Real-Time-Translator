@@ -2,12 +2,16 @@ node_modules
 __init__.py
 package-lock.json
 package.json
+script.py
+prueba.py
 /Overlay
-/Config
+/Config_page
 /audio_test
 /__pycache__
 /Interfaz Grafica(prueba)
 /venv
 /temp
-/Interfaz Grafica/temp
+/ui/temp
+/modules/__pycache__
+/conig/__pycache__
 

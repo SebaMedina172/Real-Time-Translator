@@ -1,12 +1,16 @@
+import sys
+import os
+# Agregar la carpeta raíz del proyecto al PYTHONPATH
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import wave
 import pyaudio
 import webrtcvad
-import os
 import numpy as np
 import threading
-import config
+from config import config
 import time
-from speech_processing import process_audio  # Asegúrate de importar process_audio
+from modules.speech_processing import process_audio  # Asegúrate de importar process_audio
 from PyQt5.QtCore import QThread, pyqtSignal
 
 audio = pyaudio.PyAudio()

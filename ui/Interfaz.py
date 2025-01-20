@@ -10,13 +10,13 @@ import json
 import pyaudio
 import sounddevice as sd
 import matplotlib.font_manager as fm
-from PyQt5 import QtWidgets, uic, QtCore, QtGui  # Cambia a PyQt6 si lo estás usando.
+from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSignal, QObject, QThread, QTimer  # Para manejar flags de maximizar/restaurar.
 from PyQt5.QtGui import QMouseEvent, QCursor, QIcon, QTextCursor
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy, QColorDialog, QGraphicsDropShadowEffect
-import config
-from audio_handler import record_audio, stop_recording
-from speech_processing import process_audio
+from config import config
+from modules.audio_handler import record_audio, stop_recording
+from modules.speech_processing import process_audio
 
 
 class Translator(QObject):
@@ -44,9 +44,15 @@ class MainApp(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainApp, self).__init__()
         # Carga el archivo .ui
-        uic.loadUi("RTT.ui", self)
-        self.config_style_file = "interface_config.json"  # Asegúrate de que este sea el nombre correcto
-        self.config_audio_file = "audio_config.json"
+        ui_file_path = os.path.join(os.path.dirname(__file__), 'RTT.ui')
+        uic.loadUi(ui_file_path, self)  # Cargar el archivo .ui
+        # uic.loadUi("../ui/RTT.ui", self)
+        config_style_path = os.path.join(os.path.dirname(__file__), '../config/interface_config.json')
+        self.config_style_file = config_style_path
+
+        config_audio_path = os.path.join(os.path.dirname(__file__), '../config/audio_config.json')
+        self.config_audio_file = config_audio_path
+
         self.whisper_model = "base"  # Atributo para almacenar el modelo en minúsculas
         self.font_type = "normal"  # Atributo para almacenar el tipo de fuente en minúsculas
         self.load_style_config()
@@ -197,9 +203,9 @@ class MainApp(QtWidgets.QMainWindow):
         self.play.setText("") 
         self.pause.setText("")
         self.config.setText("")
-        self.play.setIcon(QIcon("./imgs/play_white.svg"))
-        self.pause.setIcon(QIcon("./imgs/stop_white.svg"))
-        self.config.setIcon(QIcon("./imgs/config_white.svg"))
+        self.play.setIcon(QIcon("../ui/imgs/play_white.svg"))
+        self.pause.setIcon(QIcon("../ui/imgs/stop_white.svg"))
+        self.config.setIcon(QIcon("../ui/imgs/config_white.svg"))
 
         self.Larrow.hide()  # Ocultar Larrow
         self.Rarrow.show()  # Mostrar Rarrow

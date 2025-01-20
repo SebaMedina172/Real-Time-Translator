@@ -1,8 +1,12 @@
+import sys
+import os
+# Agregar la carpeta raíz del proyecto al PYTHONPATH
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import whisper
 from googletrans import Translator
 import spacy
-import os
-import config
+from config import config
 
 # Cargar modelos
 model = whisper.load_model(config.WHISPER_MODEL)
