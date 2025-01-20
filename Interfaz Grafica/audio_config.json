@@ -1,0 +1,12 @@
+{
+    "RATE": 16000,
+    "CHUNK_DURATION_MS": 30,
+    "VOICE_WINDOW": 0.4,
+    "MIN_VOICE_DURATION": 0.3,
+    "MAX_CONTINUOUS_SPEECH_TIME": 3.5,
+    "CUT_TIME": 2.0,
+    "VAD": 2,
+    "TEMP_DIR": "./temp",
+    "THRESHOLD": 500,
+    "WHISPER_MODEL": "base"
+}

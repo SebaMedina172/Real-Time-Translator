@@ -45,10 +45,14 @@ class MainApp(QtWidgets.QMainWindow):
         super(MainApp, self).__init__()
         # Carga el archivo .ui
         uic.loadUi("RTT.ui", self)
-        self.config_file = "interface_config.json"  # Asegúrate de que este sea el nombre correcto
-        self.load_config()
-
-        # Conectar señales de los campos de entrada a funciones
+        self.config_style_file = "interface_config.json"  # Asegúrate de que este sea el nombre correcto
+        self.config_audio_file = "audio_config.json"
+        self.whisper_model = "base"  # Atributo para almacenar el modelo en minúsculas
+        self.font_type = "normal"  # Atributo para almacenar el tipo de fuente en minúsculas
+        self.load_style_config()
+        self.load_audio_config()
+######################################################################################################################
+        # Conectar señales de los campos de entrada de los estilos del texto a funciones
         self.findChild(QtWidgets.QComboBox, "style_msg_box").currentTextChanged.connect(self.update_text_style)
         self.findChild(QtWidgets.QSpinBox, "size_msg_spin").valueChanged.connect(self.update_text_size)
         self.findChild(QtWidgets.QPushButton, "color_msg_btn").clicked.connect(self.select_text_color)
@@ -58,7 +62,19 @@ class MainApp(QtWidgets.QMainWindow):
         self.findChild(QtWidgets.QPushButton, "color_bg_msg").clicked.connect(self.select_background_color_msg)
         self.findChild(QtWidgets.QDoubleSpinBox, "opacity_bg_console").valueChanged.connect(self.update_opacity_bg)
         self.findChild(QtWidgets.QPushButton, "bg_color_console").clicked.connect(self.select_bg_color_console)
-        
+
+        # Conectar señales de los campos de entrada de audio a funciones
+        self.findChild(QtWidgets.QSpinBox, "rate").valueChanged.connect(self.update_rate)
+        self.findChild(QtWidgets.QSpinBox, "chunk_duration").valueChanged.connect(self.update_chunk_duration)
+        self.findChild(QtWidgets.QDoubleSpinBox, "voice_window").valueChanged.connect(self.update_voice_window)
+        self.findChild(QtWidgets.QDoubleSpinBox, "min_voice_duration").valueChanged.connect(self.update_min_voice_duration)
+        self.findChild(QtWidgets.QDoubleSpinBox, "max_continuous_speech_time").valueChanged.connect(self.update_max_continuous_speech_time)
+        self.findChild(QtWidgets.QDoubleSpinBox, "cut_time").valueChanged.connect(self.update_cut_time)
+        self.findChild(QtWidgets.QSpinBox, "threshold").valueChanged.connect(self.update_threshold)
+        self.findChild(QtWidgets.QSpinBox, "vad").valueChanged.connect(self.update_vad)
+        self.findChild(QtWidgets.QLineEdit, "temp_dir").editingFinished.connect(self.update_temp_dir)
+        self.findChild(QtWidgets.QComboBox, "whisper_model").currentTextChanged.connect(self.update_whisper_model)
+############################################################################################################################
 
         # Ocultar Rarrow al inicio
         self.Rarrow.hide()
@@ -157,9 +173,7 @@ class MainApp(QtWidgets.QMainWindow):
         # Ejemplo: Conectar un botón (ajusta los nombres de los objetos según tu diseño).
         self.findChild(QtWidgets.QPushButton, "play").clicked.connect(self.start_translation)
         self.findChild(QtWidgets.QPushButton, "pause").clicked.connect(self.stop_translation)
-        self.findChild(QtWidgets.QPushButton, "config").clicked.connect(self.save_config)
-  
-        
+        self.findChild(QtWidgets.QPushButton, "config").clicked.connect(self.save_all_config) 
 
 
         #Botones para la compresion de los botones
@@ -205,7 +219,9 @@ class MainApp(QtWidgets.QMainWindow):
 
         self.Larrow.show()  # Mostrar Larrow
         self.Rarrow.hide()  # Ocultar Rarrow
-    
+
+######################################################################################################
+
     #Iniciar Traduccion
     def start_translation(self):
         if not config.recording_active:
@@ -222,7 +238,7 @@ class MainApp(QtWidgets.QMainWindow):
                 self.recording_thread.start()
 
                 # Actualizar la interfaz
-                self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
+                self.success_msg("Traduccion iniciada, prueba hablar")
             except Exception as e:
                 print(f"Error al intentar grabar con el micrófono: {e}")
 
@@ -235,20 +251,176 @@ class MainApp(QtWidgets.QMainWindow):
                 microphone_combo_box.removeItem(microphone_combo_box.currentIndex())
 
                 # Mostrar un mensaje al usuario para que seleccione otro dispositivo
-                self.update_text_edit(f"El micrófono '{current_item}' causó un error. Por favor, elige otro.")
+                self.error_msg(f"El micrófono '{current_item}' causó un error. Por favor, elige otro.")
 
                 # Establecer recording_active como False para evitar bloqueos
                 config.recording_active = False
         else:
             print("La grabación ya está activa.")
 
-    
     #Frenar Traduccion
     def stop_translation(self):
         stop_recording()  # Detiene la grabación
         print("Parando traducción...")
         # Reiniciar el estado de las variables
         config.recording_active = False  # Asegúrate de que recording_active se establezca en False
+        self.info_msg("Traduccion detenida")
+
+
+########################################################################################################
+    #Plantilla para mensajes de error
+    def error_msg(self, new_text):
+        print(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+
+        # Crear un nuevo mensaje con estilo fijo
+        if new_text:
+            new_message = QLabel(new_text)
+            new_message.setFixedHeight(50)  # Establecer una altura fija para cada etiqueta
+            new_message.setWordWrap(True)  # Permitir el ajuste de línea
+
+            # Aplicar estilos
+            new_message.setStyleSheet(f"""
+                background-color: #ffffff;  /* Color de fondo por defecto */
+                border: 2px solid #d30000;
+                border-radius: 5px;
+                padding: 2px;
+                color: #ff0000;  /* Aplicar el color del texto */
+                font-family: "Arial";  /* Aplicar el estilo de fuente */
+                font-size: 12px;  /* Aplicar el tamaño de fuente */
+            """)
+
+            # Crear y aplicar el efecto de sombra
+            shadow_effect = QGraphicsDropShadowEffect()
+            shadow_effect.setBlurRadius(10)  # Radio de desenfoque
+            shadow_effect.setXOffset(2)  # Desplazamiento en el eje X
+            shadow_effect.setYOffset(2)  # Desplazamiento en el eje Y
+            shadow_effect.setColor(QtGui.QColor(0, 0, 0, 160))  # Color de la sombra (RGBA)
+
+            new_message.setGraphicsEffect(shadow_effect)  # Aplicar el efecto de sombra
+
+            new_message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Ancho expansible, altura fija
+
+            # Añadir mensaje al layout
+            self.messages_layout.addWidget(new_message)
+
+            # Desplazar automáticamente hacia el mensaje más nuevo
+            QTimer.singleShot(10, self.scroll_to_bottom)
+    
+    #Plantilla para mensajes de informacion
+    def info_msg(self, new_text):
+        print(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+
+        # Crear un nuevo mensaje con estilo fijo
+        if new_text:
+            new_message = QLabel(new_text)
+            new_message.setFixedHeight(50)  # Establecer una altura fija para cada etiqueta
+            new_message.setWordWrap(True)  # Permitir el ajuste de línea
+
+            # Aplicar estilos
+            new_message.setStyleSheet(f"""
+                background-color: #ffffff;  /* Color de fondo por defecto */
+                border: 2px solid #0000c6;
+                border-radius: 5px;
+                padding: 2px;
+                color: #00009f;  /* Aplicar el color del texto */
+                font-family: "Arial";  /* Aplicar el estilo de fuente */
+                font-size: 12px;  /* Aplicar el tamaño de fuente */
+            """)
+
+            # Crear y aplicar el efecto de sombra
+            shadow_effect = QGraphicsDropShadowEffect()
+            shadow_effect.setBlurRadius(10)  # Radio de desenfoque
+            shadow_effect.setXOffset(2)  # Desplazamiento en el eje X
+            shadow_effect.setYOffset(2)  # Desplazamiento en el eje Y
+            shadow_effect.setColor(QtGui.QColor(0, 0, 0, 160))  # Color de la sombra (RGBA)
+
+            new_message.setGraphicsEffect(shadow_effect)  # Aplicar el efecto de sombra
+
+            new_message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Ancho expansible, altura fija
+
+            # Añadir mensaje al layout
+            self.messages_layout.addWidget(new_message)
+
+            # Desplazar automáticamente hacia el mensaje más nuevo
+            QTimer.singleShot(10, self.scroll_to_bottom)
+    
+    #Plantilla para mensajes de exito
+    def success_msg(self, new_text):
+        print(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+
+        # Crear un nuevo mensaje con estilo fijo
+        if new_text:
+            new_message = QLabel(new_text)
+            new_message.setFixedHeight(50)  # Establecer una altura fija para cada etiqueta
+            new_message.setWordWrap(True)  # Permitir el ajuste de línea
+
+            # Aplicar estilos
+            new_message.setStyleSheet(f"""
+                background-color: #ffffff;  /* Color de fondo por defecto */
+                border: 2px solid #00b200;
+                border-radius: 5px;
+                padding: 2px;
+                color: #00ac00;  /* Aplicar el color del texto */
+                font-family: "Arial";  /* Aplicar el estilo de fuente */
+                font-size: 12px;  /* Aplicar el tamaño de fuente */
+            """)
+
+            # Crear y aplicar el efecto de sombra
+            shadow_effect = QGraphicsDropShadowEffect()
+            shadow_effect.setBlurRadius(10)  # Radio de desenfoque
+            shadow_effect.setXOffset(2)  # Desplazamiento en el eje X
+            shadow_effect.setYOffset(2)  # Desplazamiento en el eje Y
+            shadow_effect.setColor(QtGui.QColor(0, 0, 0, 160))  # Color de la sombra (RGBA)
+
+            new_message.setGraphicsEffect(shadow_effect)  # Aplicar el efecto de sombra
+
+            new_message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Ancho expansible, altura fija
+
+            # Añadir mensaje al layout
+            self.messages_layout.addWidget(new_message)
+
+            # Desplazar automáticamente hacia el mensaje más nuevo
+            QTimer.singleShot(10, self.scroll_to_bottom)
+
+    # Plantilla para mensajes de configuracion
+    def config_msg(self, new_text):
+        print(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+
+        # Crear un nuevo mensaje con estilo fijo
+        if new_text:
+            new_message = QLabel(new_text)
+            new_message.setFixedHeight(50)  # Establecer una altura fija para cada etiqueta
+            new_message.setWordWrap(True)  # Permitir el ajuste de línea
+
+            # Aplicar estilos
+            new_message.setStyleSheet(f"""
+                background-color: #ffffff;  /* Color de fondo por defecto */
+                border: 2px solid #ff8c00;  /* Color de borde naranja */
+                border-radius: 5px;
+                padding: 2px;
+                color: #ff8c00;  /* Aplicar el color del texto en naranja */
+                font-family: "Arial";  /* Aplicar el estilo de fuente */
+                font-size: 12px;  /* Aplicar el tamaño de fuente */
+            """)
+
+            # Crear y aplicar el efecto de sombra
+            shadow_effect = QGraphicsDropShadowEffect()
+            shadow_effect.setBlurRadius(10)  # Radio de desenfoque
+            shadow_effect.setXOffset(2)  # Desplazamiento en el eje X
+            shadow_effect.setYOffset(2)  # Desplazamiento en el eje Y
+            shadow_effect.setColor(QtGui.QColor(0, 0, 0, 160))  # Color de la sombra (RGBA)
+
+            new_message.setGraphicsEffect(shadow_effect)  # Aplicar el efecto de sombra
+
+            new_message.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Ancho expansible, altura fija
+
+            # Añadir mensaje al layout
+            self.messages_layout.addWidget(new_message)
+
+            # Desplazar automáticamente hacia el mensaje más nuevo
+            QTimer.singleShot(10, self.scroll_to_bottom)
+
+###########################################################################################################
 
     #Actualizar mensajes
     def update_text_edit(self, new_text):
@@ -304,12 +476,12 @@ class MainApp(QtWidgets.QMainWindow):
         scrollbar = self.Consola.verticalScrollBar()  # Accede a la barra de desplazamiento del QScrollArea
         scrollbar.setValue(scrollbar.maximum())  # Desplaza hacia el final
     
-    
-    #Cargar la configuracion guardada en el json
-    def load_config(self):
+#####################################################################################################
+    #Cargar la configuracion de los estilos guardada en el json
+    def load_style_config(self):
         """Carga la configuración desde el archivo JSON."""
-        if os.path.exists(self.config_file):
-            with open(self.config_file, 'r') as f:
+        if os.path.exists(self.config_style_file):
+            with open(self.config_style_file, 'r') as f:
                 config = json.load(f)
                 # Aplicar configuración a la interfaz
                 self.findChild(QtWidgets.QComboBox, "style_msg_box").setCurrentText(config.get("font_style", "Arial"))
@@ -325,14 +497,72 @@ class MainApp(QtWidgets.QMainWindow):
                 # Aplicar color de fondo y opacidad al messages_container
                 self.apply_messages_container_style(config)
 
-    #Guardar Configuracion
-    def save_config(self):
+    def load_audio_config(self):
+        """Carga la configuración de audio desde el archivo JSON."""
+        if os.path.exists(self.config_audio_file):
+            with open(self.config_audio_file, 'r') as f:
+                audio_config = json.load(f)
+                # Aplicar configuración a las variables de la interfaz
+                self.findChild(QtWidgets.QSpinBox, "rate").setValue(audio_config.get("RATE", 16000))
+                self.findChild(QtWidgets.QSpinBox, "chunk_duration").setValue(audio_config.get("CHUNK_DURATION_MS", 30))
+                self.findChild(QtWidgets.QDoubleSpinBox, "voice_window").setValue(audio_config.get("VOICE_WINDOW", 0.4))
+                self.findChild(QtWidgets.QDoubleSpinBox, "min_voice_duration").setValue(audio_config.get("MIN_VOICE_DURATION", 0.3))
+                self.findChild(QtWidgets.QDoubleSpinBox, "max_continuous_speech_time").setValue(audio_config.get("MAX_CONTINUOUS_SPEECH_TIME", 3))
+                self.findChild(QtWidgets.QDoubleSpinBox, "cut_time").setValue(audio_config.get("CUT_TIME", 2))
+                self.findChild(QtWidgets.QSpinBox, "vad").setValue(audio_config.get("VAD", 2))
+                self.findChild(QtWidgets.QLineEdit, "temp_dir").setText(audio_config.get("TEMP_DIR", './temp'))
+                self.findChild(QtWidgets.QSpinBox, "threshold").setValue(audio_config.get("THRESHOLD", 500))
+                self.findChild(QtWidgets.QComboBox, "whisper_model").setCurrentText(audio_config.get("WHISPER_MODEL", "tiny"))
+
+#####################################################################################################
+    #Guardar ambas configuraciones
+    def save_all_config(self):
+        """Guarda tanto la configuración de estilos de texto como la de audio."""
         print("Guardando configuración...")
+
+        # Guardar configuración de estilos de texto
+        self.save_style_config()  # Esta es la función que ya tienes para guardar estilos
+
+        # Guardar configuración de audio
+        self.save_audio_config()  # Esta es la función que implementaste para guardar audio
+
+        self.config_msg("Configuracion guardada exitosamente")
+    
+    #Guardar configuracion de audio
+    def save_audio_config(self):
+        """Guarda la configuración de audio en el archivo JSON."""
+        print("Guardando configuración de audio...")
+
+        # Recoger los valores de los inputs
+        audio_config = {
+            "RATE": self.findChild(QtWidgets.QSpinBox, "rate").value(),
+            "CHUNK_DURATION_MS": self.findChild(QtWidgets.QSpinBox, "chunk_duration").value(),
+            "VOICE_WINDOW": self.findChild(QtWidgets.QDoubleSpinBox, "voice_window").value(),
+            "MIN_VOICE_DURATION": self.findChild(QtWidgets.QDoubleSpinBox, "min_voice_duration").value(),
+            "MAX_CONTINUOUS_SPEECH_TIME": self.findChild(QtWidgets.QDoubleSpinBox, "max_continuous_speech_time").value(),
+            "CUT_TIME": self.findChild(QtWidgets.QDoubleSpinBox, "cut_time").value(),
+            "VAD": self.findChild(QtWidgets.QSpinBox, "vad").value(),
+            "TEMP_DIR": self.findChild(QtWidgets.QLineEdit, "temp_dir").text(),
+            "THRESHOLD": self.findChild(QtWidgets.QSpinBox, "threshold").value(),
+            "WHISPER_MODEL": self.whisper_model
+        }
+
+        # Guardar en el archivo JSON
+        with open(self.config_audio_file, 'w') as f:
+            json.dump(audio_config, f, indent=4)  # Usar indent=4 para mejorar la legibilidad
+
+        print("Configuración de audio guardada correctamente.")
+        # Opcional: Mostrar un mensaje al usuario
+        #Infor MSG para despues
+    
+    #Guardar configuracion de estilos
+    def save_style_config(self):
+        print("Guardando configuración de estilos...")
         """Guarda la configuración en el archivo JSON."""
         config = {
             "font_style": self.findChild(QtWidgets.QComboBox, "style_msg_box").currentText(),
             "font_size": self.findChild(QtWidgets.QSpinBox, "size_msg_spin").value(),
-            "font_type": self.findChild(QtWidgets.QComboBox, "type_font_msg").currentText(),
+            "font_type": self.font_type,
             "color_msg": self.extract_color(self.findChild(QtWidgets.QPushButton, "color_msg_btn").styleSheet()),  # Obtener el color del texto
             "stroke_border": self.findChild(QtWidgets.QSpinBox, "stroke_border_msg").value(),
             "color_border_msg": self.extract_color(self.findChild(QtWidgets.QPushButton, "color_border_msg").styleSheet()),  # Obtener el color del borde
@@ -340,9 +570,10 @@ class MainApp(QtWidgets.QMainWindow):
             "opacity_bg_console": self.findChild(QtWidgets.QDoubleSpinBox, "opacity_bg_console").value(),
             "color_bg_console": self.extract_color(self.findChild(QtWidgets.QPushButton, "bg_color_console").styleSheet()),  # Obtener el color de fondo de la consola
         }
-        with open(self.config_file, 'w') as f:
+        with open(self.config_style_file, 'w') as f:
             json.dump(config, f, indent=4)  # Usar indent=4 para mejorar la legibilidad
-    
+
+#####################################################################################################
     def apply_messages_container_style(self, config):
         """Aplica el color de fondo y la opacidad al messages_container."""
         bg_color = config.get("color_bg_console", "#464d5f")  # Color de fondo por defecto
@@ -372,7 +603,80 @@ class MainApp(QtWidgets.QMainWindow):
             return style.split("background-color:")[-1].strip().split(";")[0]  # Obtener solo el valor del color de fondo
         return "#000000"  # Valor por defecto si no se encuentra
 
-    #Funciones para tomar correctamente los valores de los inputs
+##################################################################################################################
+    #Funciones para tomar correctamente los valores de los inputs de audio
+    def update_rate(self):
+        """Actualiza la tasa de muestreo basada en el input del usuario."""
+        rate = self.findChild(QtWidgets.QSpinBox, "rate").value()
+        print(f"Tasa de muestreo actualizada a: {rate} HZ")  # Mensaje de depuración
+    
+    def update_chunk_duration(self):
+        """Actualiza la duración del chunk basada en el input del usuario."""
+        chunk_duration = self.findChild(QtWidgets.QSpinBox, "chunk_duration").value()
+        print(f"Duración del chunk actualizada a: {chunk_duration} ms")  # Mensaje de depuración
+
+    def update_voice_window(self):
+        """Actualiza la ventana de voz basada en el input del usuario."""
+        voice_window = self.findChild(QtWidgets.QDoubleSpinBox, "voice_window").value()
+        print(f"Ventana de voz actualizada a: {voice_window} seg")  # Mensaje de depuración
+    
+    def update_min_voice_duration(self):
+        """Actualiza la duracion minima de la voz basada en el input del usuario."""
+        min_voice_duration = self.findChild(QtWidgets.QDoubleSpinBox, "min_voice_duration").value()
+        print(f"Duración mínima de voz actualizada a: {min_voice_duration} seg")  # Mensaje de depuración
+
+    def update_max_continuous_speech_time(self):
+        """Actualiza la ventana de voz basada en el input del usuario."""
+        max_continuous_speech_time = self.findChild(QtWidgets.QDoubleSpinBox, "max_continuous_speech_time").value()
+        print(f"Tiempo máximo de habla continua actualizado a: {max_continuous_speech_time} seg")  # Mensaje de depuración
+
+    def update_cut_time(self):
+        """Actualiza la ventana de voz basada en el input del usuario."""
+        cut_time = self.findChild(QtWidgets.QDoubleSpinBox, "cut_time").value()
+        print(f"Tiempo de corte actualizado a: {cut_time} seg")  # Mensaje de depuración
+
+    def update_threshold(self):
+        """Actualiza la ventana de voz basada en el input del usuario."""
+        threshold = self.findChild(QtWidgets.QSpinBox, "threshold").value()
+        print(f"Umbral actualizado a: {threshold}")  # Mensaje de depuración
+
+    def update_vad(self):
+        """Actualiza la ventana de voz basada en el input del usuario."""
+        vad = self.findChild(QtWidgets.QSpinBox, "vad").value()
+        print(f"VAD actualizado a: {vad}")  # Mensaje de depuración
+    
+    def update_temp_dir(self):
+        """Actualiza la ruta temporal basada en el input del usuario."""
+        temp_dir = self.findChild(QtWidgets.QLineEdit, "temp_dir").text()
+        print(f"Ruta temporal ingresada: {temp_dir}")  # Mensaje de depuración
+
+        # Validar la ruta solo al perder el foco o al hacer clic en un botón
+        if not os.path.exists(temp_dir) and temp_dir != "":
+            print("La ruta temporal no es válida. Por favor, ingresa una ruta existente.")
+            self.error_msg("La ruta temporal no es válida. Por favor, ingresa una ruta existente.")
+            # Aquí puedes limpiar el campo o establecer un valor predeterminado
+            self.findChild(QtWidgets.QLineEdit, "temp_dir").clear()  # Limpiar el campo
+
+    def update_whisper_model(self):
+        """Actualiza el modelo Whisper basado en el input del usuario."""
+        model = self.findChild(QtWidgets.QComboBox, "whisper_model").currentText()
+        print(f"Modelo Whisper seleccionado: {model}")  # Mensaje de depuración
+
+        # Diccionario para mapear modelos a sus versiones en minúsculas
+        model_mapping = {
+            "Tiny": "tiny",
+            "Base": "base",
+            "Small": "small",
+            "Medium": "medium",
+            "Large": "large"
+        }
+
+        # Obtener el modelo en minúsculas usando el diccionario
+        self.whisper_model = model_mapping.get(model, "base")  # Valor por defecto es "base"
+        print(f"Modelo Whisper en minúsculas: {self.whisper_model}")  # Mensaje de depuración
+
+##################################################################################################################
+    #Funciones para tomar correctamente los valores de los inputs de estilos de texto
     def update_text_style(self):
         """Actualiza el estilo de texto basado en el input del usuario."""
         style = self.findChild(QtWidgets.QComboBox, "style_msg_box").currentText()
@@ -393,13 +697,10 @@ class MainApp(QtWidgets.QMainWindow):
         """Actualiza el tipo de texto basado en el input del usuario."""
         text_type = self.findChild(QtWidgets.QComboBox, "type_font_msg").currentText()
         print(f"Tipo de texto actualizado a: {text_type}")  # Mensaje de depuración
-        font_weight = "normal"
-        if text_type == "Bold":
-            font_weight = "bold"
-        elif text_type == "Italic":
-            font_weight = "italic"
-        elif text_type == "Underlined":
-            font_weight = "underline"
+
+        # Convertir el tipo de fuente a minúsculas
+        self.font_type = text_type.lower()  # Almacenar en minúsculas
+        print(f"Tipo de fuente en minúsculas: {self.font_type}")  # Mensaje de depuración
         
         # Aplicar el tipo a todas las etiquetas que desees
         for label in self.messages_layout.findChildren(QtWidgets.QLabel):
@@ -461,6 +762,8 @@ class MainApp(QtWidgets.QMainWindow):
             
             # Aplicar el color de fondo al messages_container
             self.messages_container.setStyleSheet(f"background-color: {color.name()};")
+
+##################################################################################################################
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

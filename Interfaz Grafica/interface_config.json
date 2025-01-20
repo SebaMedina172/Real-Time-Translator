@@ -1,11 +1,11 @@
 {
     "font_style": "Arial",
     "font_size": 12,
-    "font_type": "Normal",
+    "font_type": "normal",
     "color_msg": "#000000",
     "stroke_border": 2,
     "color_border_msg": "#000000",
     "color_bg_msg": "#ffffff",
-    "opacity_bg_console": 1.0,
-    "color_bg_console": "#ffff7f"
+    "opacity_bg_console": 0.9,
+    "color_bg_console": "#464d5f"
 }
