@@ -109,13 +109,13 @@ class MainApp(QtWidgets.QMainWindow):
 
     #funcion para cargar los mics detectados
     def populate_microphone_list(self):
-        """Llena el QComboBox con los micrófonos disponibles."""
+        """Llena el QComboBox con los micrófonos disponibles y funcionales."""
         p = pyaudio.PyAudio()
         microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
-        microphone_combo_box.clear()  # Limpiar elementos anteriores
+        microphone_combo_box.clear()
+        self.microphone_mapping = {}
 
-        valid_microphones = []  # Lista para almacenar micrófonos válidos
-        latency_threshold = 0.1  # Umbral de latencia en segundos
+        latency_threshold = 0.2  # Relajar umbral de latencia
 
         for i in range(p.get_device_count()):
             device_info = p.get_device_info_by_index(i)
@@ -125,41 +125,34 @@ class MainApp(QtWidgets.QMainWindow):
             default_low_input_latency = device_info['defaultLowInputLatency']
             default_high_input_latency = device_info['defaultHighInputLatency']
 
-            # Solo considerar dispositivos de entrada con al menos 1 canal
-            if max_input_channels > 0:
+            if max_input_channels > 0:  # Solo dispositivos de entrada
                 try:
-                    # Intentar abrir un flujo de prueba
+                    # Intentar abrir un flujo y grabar datos para validar el micrófono
                     stream = p.open(format=pyaudio.paInt16,
                                     channels=1,
                                     rate=int(default_sample_rate),
                                     input=True,
                                     input_device_index=i)
-                    stream.close()  # Si funciona, lo cerramos inmediatamente
-                    print(f"Dispositivo válido: {name}, Canales: {max_input_channels}, "
-                        f"Tasa de muestreo: {default_sample_rate}, "
-                        f"Latencia baja: {default_low_input_latency}, "
-                        f"Latencia alta: {default_high_input_latency}")
-
-                    # Filtrar dispositivos por latencia
-                    if default_low_input_latency <= latency_threshold and \
-                        default_high_input_latency <= latency_threshold:
-                        # valid_microphones.append((i, name))  # Agregar a la lista de micrófonos válidos
-
-                        # Agregar el micrófono al QComboBox con tooltip
+                    frames = stream.read(1024, exception_on_overflow=False)
+                    stream.close()
+                    
+                    # Verificar criterios adicionales
+                    if 0.005 <= default_low_input_latency <= latency_threshold and \
+                        0.005 <= default_high_input_latency <= latency_threshold:
                         microphone_combo_box.addItem(name)
-                        microphone_combo_box.setItemData(microphone_combo_box.count() - 1, name, Qt.ToolTipRole)
+                        microphone_combo_box.setItemData(microphone_combo_box.count() - 1,name, Qt.ToolTipRole)
+                        self.microphone_mapping[name] = i
+                        print(f"Micrófono válido añadido: {name}")
                     else:
-                        print(f"Dispositivo omitido por latencia: {name}")
-
+                        print(f"Micrófono omitido por alta latencia: {name}")
                 except Exception as e:
-                    print(f"Error al abrir el dispositivo ({name}): {e}")
-                    print(f"Detalles del dispositivo: {device_info}")  # Imprimir detalles del dispositivo
+                    print(f"Error al probar el micrófono ({name}): {e}")
 
-        # Agregar los micrófonos válidos al QComboBox
-        for index, name in valid_microphones:
-            microphone_combo_box.addItem(name)
+        # Si no hay micrófonos válidos, añadir un mensaje al QComboBox
+        if microphone_combo_box.count() == 0:
+            microphone_combo_box.addItem("No se encontraron micrófonos válidos")
 
-        p.terminate()  # Terminar PyAudio
+        p.terminate()
 
     def populate_font_styles(self):
         """Llena el QComboBox con las fuentes instaladas en el sistema."""
@@ -236,7 +229,9 @@ class MainApp(QtWidgets.QMainWindow):
             print(config.recording_active) 
 
             # Obtener el índice del micrófono seleccionado
-            mic_index = self.findChild(QtWidgets.QComboBox, "microphoneComboBox").currentIndex()
+            microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
+            selected_microphone_name = microphone_combo_box.currentText()  # Obtener el nombre seleccionado
+            mic_index = self.microphone_mapping.get(selected_microphone_name)  # Obtener el índice real del dispositivo
 
             try:
                 # Intentar iniciar la grabación con el micrófono seleccionado

@@ -13,5 +13,5 @@ prueba.py
 /temp
 /ui/temp
 /modules/__pycache__
-/conig/__pycache__
-
+/config/__pycache__
+/config/settings.py
