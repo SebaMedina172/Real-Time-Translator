@@ -12,6 +12,7 @@ from config import config
 import time
 from modules.speech_processing import process_audio  # Asegúrate de importar process_audio
 from PyQt5.QtCore import QThread, pyqtSignal
+from modules.circular_buffer import CircularBuffer
 
 audio = pyaudio.PyAudio()
 stream = audio.open(format=pyaudio.paInt16,
@@ -22,7 +23,7 @@ stream = audio.open(format=pyaudio.paInt16,
 vad = webrtcvad.Vad(config.VAD)  # Sensibilidad del mic
 
 # Variables globales para grabación
-audio_buffer = []
+audio_buffer = CircularBuffer(size=config.BUFFER_SIZE)  # Define BUFFER_SIZE en tu config
 is_speaking = False
 silence_counter = 0
 lock = threading.Lock()
@@ -83,55 +84,49 @@ def record_audio(translator,app_instance,mic_index):
     start_time = time.time()  # Inicializa start_time al principio de la función
 
     while config.recording_active:
-        print("Grabando...")  # Mensaje de depuración
+        #print("Grabando...")  # Mensaje de depuración
         frame = stream.read(config.CHUNK, exception_on_overflow=False)
         try:
             # Detecta si es voz o si el volumen es lo suficientemente alto
             is_voice = vad.is_speech(frame, config.RATE) or is_loud_enough(frame)
-            print(f"¿Es voz? {is_voice}")  # Mensaje de depuración
+            #\print(f"¿Es voz? {is_voice}")  # Mensaje de depuración
         except webrtcvad.Error as e:
             print(f"Error en VAD: {e}")
             continue
 
         if is_voice:
-            # Si detecta voz, reinicia el contador de silencio
             silence_counter = 0
-            with lock:
-                audio_buffer.append(frame)  # Agrega el frame al buffer
+            audio_buffer.append(frame)  # Agrega el frame al buffer circular
             is_speaking = True
 
-            # Si lleva más de X segundos hablando, realiza un corte inteligente
             if time.time() - start_time > config.MAX_CONTINUOUS_SPEECH_TIME:
-                with lock:
-                    cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
-                    temp_audio = audio_buffer[-cut_index:]  # Toma solo los últimos 2 segundos
-                    temp_file = save_temp_audio(temp_audio)
-                    # Usar QThread para el procesamiento de audio
-                    audio_thread = AudioProcessingThread(temp_file, translator)
-                    audio_thread.finished_processing.connect(app_instance.update_text_edit)  # Conectar a la función de actualización
-                    audio_thread.start()
-                    audio_buffer = []
+                cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
+                temp_audio = audio_buffer.get_data()[-cut_index:]  # Obtiene los últimos X frames
+                temp_file = save_temp_audio(temp_audio)
+                audio_thread = AudioProcessingThread(temp_file, translator)
+                audio_thread.finished_processing.connect(app_instance.update_text_edit)
+                audio_thread.start()
+                audio_buffer.clear()  # Limpia el buffer circular
                 is_speaking = False
-                start_time = time.time()  # Reinicia el temporizador
+                start_time = time.time()
 
         elif is_speaking:
             # Si hay silencio después de haber hablado, aumenta el contador
             silence_counter += 1
             if silence_counter > int(config.RATE / config.CHUNK * config.VOICE_WINDOW):
                 # Si el buffer tiene suficiente duración, lo guarda
-                if len(audio_buffer) >= int(config.MIN_VOICE_DURATION * config.RATE / config.CHUNK):
-                    with lock:
-                        cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
-                        temp_audio = audio_buffer[-cut_index:]  # Toma solo los últimos 2 segundos
-                        temp_file = save_temp_audio(temp_audio)
+                if len(audio_buffer.get_data()) >= int(config.MIN_VOICE_DURATION * config.RATE / config.CHUNK):
+                    
+                    cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
+                    temp_audio = audio_buffer.get_data()[-cut_index:]  # Toma solo los últimos 2 segundos
+                    temp_file = save_temp_audio(temp_audio)
                     # Usar QThread para el procesamiento de audio
                     audio_thread = AudioProcessingThread(temp_file, translator)
                     audio_thread.finished_processing.connect(app_instance.update_text_edit)  # Conectar a la función de actualización
                     audio_thread.start()
 
                 # Resetea el buffer y el estado de grabación
-                with lock:
-                    audio_buffer = []  # Resetea el buffer
+                audio_buffer.clear()  # Resetea el buffer
                 is_speaking = False
                 start_time = time.time()  # Reinicia el temporizador
 
@@ -142,12 +137,12 @@ def record_audio(translator,app_instance,mic_index):
                 # Si ha pasado el tiempo máximo sin voz, resetea el contador
                 silence_counter = 0
                 start_time = time.time()  # Reinicia el tiempo para una nueva grabación
-        print("Grabación detenida.")  # Mensaje de depuración al finalizar
+        #print("Grabación detenida.")  # Mensaje de depuración al finalizar
 
 def stop_recording():
     global audio_buffer
     config.recording_active = False
-    audio_buffer = []
+    audio_buffer.clear()
     print("Deteniendo la grabación...")
     stream.stop_stream()  # Detener el flujo de audio
     stream.close()  # Cerrar el flujo de audio

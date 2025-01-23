@@ -22,6 +22,7 @@ def transcribe_and_translate(audio_file):
         
         # Extrae el texto de la transcripción
         text = result.get('text', None)
+        print(f"Texto transcripto: {text}")
         
         if not text:
             print("La transcripción está vacía.")
@@ -29,7 +30,7 @@ def transcribe_and_translate(audio_file):
         
         # Detecta el idioma de la transcripción
         detected_language = result['language']
-        print(detected_language)
+        print(f"Idioma detectado: {detected_language}")
 
         # Segmentación del texto usando spaCy según el idioma detectado
         if detected_language == "es":
