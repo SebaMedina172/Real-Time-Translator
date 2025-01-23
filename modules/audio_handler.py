@@ -14,6 +14,7 @@ from modules.speech_processing import process_audio  # Asegúrate de importar pr
 from PyQt5.QtCore import QThread, pyqtSignal
 from modules.circular_buffer import CircularBuffer
 
+
 audio = pyaudio.PyAudio()
 stream = audio.open(format=pyaudio.paInt16,
                     channels=1,
@@ -23,7 +24,7 @@ stream = audio.open(format=pyaudio.paInt16,
 vad = webrtcvad.Vad(config.VAD)  # Sensibilidad del mic
 
 # Variables globales para grabación
-audio_buffer = CircularBuffer(size=config.BUFFER_SIZE)  # Define BUFFER_SIZE en tu config
+audio_buffer = CircularBuffer(size=config.BUFFER_SIZE) 
 is_speaking = False
 silence_counter = 0
 lock = threading.Lock()
@@ -41,10 +42,11 @@ class AudioProcessingThread(QThread):
         translated_text = process_audio(self.audio_file, self.translator)
         self.finished_processing.emit(translated_text)  # Emitir la señal con el texto traducido
 
-def save_temp_audio(frames):
+def save_temp_audio(frames, file_suffix=""):
     temp_dir = config.TEMP_DIR
     os.makedirs(temp_dir, exist_ok=True)
-    temp_file_path = os.path.join(temp_dir, "temp_audio.wav")
+    timestamp = int(time.time())
+    temp_file_path = os.path.join(temp_dir, f"temp_audio_{timestamp}{file_suffix}.wav")
 
     with wave.open(temp_file_path, 'wb') as wf:
         wf.setnchannels(1)

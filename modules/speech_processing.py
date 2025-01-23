@@ -73,11 +73,11 @@ def process_audio(audio_file, translator):
             print("No se actualiza el texto traducido porque está vacío.")
     except Exception as e:
         print(f"Error en el procesamiento de audio: {e}")
-    finally:
-        try:
-            os.remove(audio_file)
-        except Exception as e:
-            print(f"Error al eliminar archivo: {e}")
+    # finally:
+    #     try:
+    #         os.remove(audio_file)
+    #     except Exception as e:
+    #         print(f"Error al eliminar archivo: {e}")
 
 
 
