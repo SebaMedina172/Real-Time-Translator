@@ -7,6 +7,7 @@ import whisper
 from googletrans import Translator
 import spacy
 from config import config
+import asyncio
 
 # Cargar modelos
 model = whisper.load_model(config.WHISPER_MODEL)
@@ -15,10 +16,10 @@ nlp_es = spacy.load(config.SPACY_MODEL_ES)
 nlp_en = spacy.load(config.SPACY_MODEL_EN)
 
 
-def transcribe_and_translate(audio_file):
+async def transcribe_and_translate(audio_file):
     try:
         # Realiza la transcripción con Whisper
-        result = model.transcribe(audio_file)
+        result = await asyncio.to_thread(model.transcribe, audio_file)
         
         # Extrae el texto de la transcripción
         text = result.get('text', None)
@@ -48,9 +49,11 @@ def transcribe_and_translate(audio_file):
         for sentence in sentences:
             # Traducir de forma bidireccional según el idioma detectado
             if detected_language == "es":
-                translated_sentences.append(translator.translate(sentence, src='es', dest='en').text)
+                translated_result = await asyncio.to_thread(translator.translate, sentence, src='es', dest='en')
+                translated_sentences.append(translated_result.text)  # Accede al atributo text
             elif detected_language == "en":
-                translated_sentences.append(translator.translate(sentence, src='en', dest='es').text)
+                translated_result = await asyncio.to_thread(translator.translate, sentence, src='en', dest='es')
+                translated_sentences.append(translated_result.text)  # Accede al atributo text
             else:
                 translated_sentences.append(sentence)
         
@@ -62,9 +65,9 @@ def transcribe_and_translate(audio_file):
         print(f"Error al transcribir o traducir: {e}")
         return None
 
-def process_audio(audio_file, translator):
+async def process_audio(audio_file, translator):
     try:
-        translated_text = transcribe_and_translate(audio_file)
+        translated_text = await transcribe_and_translate(audio_file)
         if translated_text:  # Solo actualiza si hay texto traducido
             config.translated_text = translated_text
             print(f"Texto traducido: {config.translated_text}")
@@ -73,11 +76,11 @@ def process_audio(audio_file, translator):
             print("No se actualiza el texto traducido porque está vacío.")
     except Exception as e:
         print(f"Error en el procesamiento de audio: {e}")
-    # finally:
-    #     try:
-    #         os.remove(audio_file)
-    #     except Exception as e:
-    #         print(f"Error al eliminar archivo: {e}")
+    finally:
+        try:
+            os.remove(audio_file)
+        except Exception as e:
+            print(f"Error al eliminar archivo: {e}")
 
 
 

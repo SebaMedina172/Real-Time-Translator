@@ -13,6 +13,7 @@ import time
 from modules.speech_processing import process_audio
 from PyQt5.QtCore import QThread, pyqtSignal
 from modules.circular_buffer import CircularBuffer
+import asyncio
 
 # Configuración de audio
 audio = pyaudio.PyAudio()
@@ -39,7 +40,9 @@ class AudioProcessingThread(QThread):
 
     def run(self):
         # Llama a la función de procesamiento de audio
-        translated_text = process_audio(self.audio_file, self.translator)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        translated_text = loop.run_until_complete(process_audio(self.audio_file, self.translator))
         self.finished_processing.emit(translated_text)  # Emitir la señal con el texto traducido
 
 def save_temp_audio(frames, file_suffix=""):
