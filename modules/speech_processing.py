@@ -6,14 +6,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import whisper
 from googletrans import Translator
 import spacy
-from config import config
+import config.configuracion as cfg
+from config.configuracion import settings, load_settings
 import asyncio
 
+load_settings()
+
 # Cargar modelos
-model = whisper.load_model(config.WHISPER_MODEL)
+model = whisper.load_model(settings["WHISPER_MODEL"])
 translator = Translator()
-nlp_es = spacy.load(config.SPACY_MODEL_ES)
-nlp_en = spacy.load(config.SPACY_MODEL_EN)
+nlp_es = spacy.load(cfg.SPACY_MODEL_ES)
+nlp_en = spacy.load(cfg.SPACY_MODEL_EN)
 
 
 async def transcribe_and_translate(audio_file):
@@ -69,8 +72,8 @@ async def process_audio(audio_file, translator):
     try:
         translated_text = await transcribe_and_translate(audio_file)
         if translated_text:  # Solo actualiza si hay texto traducido
-            config.translated_text = translated_text
-            print(f"Texto traducido: {config.translated_text}")
+            cfg.translated_text = translated_text
+            print(f"Texto traducido: {cfg.translated_text}")
             translator.update_translated_text()
         else:
             print("No se actualiza el texto traducido porque está vacío.")

@@ -14,7 +14,8 @@ from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSignal, QObject, QThread, QTimer  # Para manejar flags de maximizar/restaurar.
 from PyQt5.QtGui import QMouseEvent, QCursor, QIcon, QTextCursor
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy, QColorDialog, QGraphicsDropShadowEffect
-from config import config
+import config.configuracion as cfg
+from config.configuracion import settings, load_settings, calcular_valores_dinamicos
 from modules.audio_handler import record_audio, stop_recording
 from modules.speech_processing import process_audio
 
@@ -26,9 +27,9 @@ class Translator(QObject):
         super().__init__()
 
     def update_translated_text(self):
-        print(f"Emitiendo texto traducido: '{config.translated_text}'")  # Mensaje de depuración
-        if config.translated_text:  # Solo emite si hay texto
-            self.text_changed.emit(config.translated_text)
+        print(f"Emitiendo texto traducido: '{cfg.translated_text}'")  # Mensaje de depuración
+        if cfg.translated_text:  # Solo emite si hay texto
+            self.text_changed.emit(cfg.translated_text)
 
 class AudioRecordingThread(QThread):
     def __init__(self, translator, app_instance, mic_index):
@@ -80,6 +81,7 @@ class MainApp(QtWidgets.QMainWindow):
         self.findChild(QtWidgets.QSpinBox, "vad").valueChanged.connect(self.update_vad)
         self.findChild(QtWidgets.QLineEdit, "temp_dir").editingFinished.connect(self.update_temp_dir)
         self.findChild(QtWidgets.QComboBox, "whisper_model").currentTextChanged.connect(self.update_whisper_model)
+        self.findChild(QtWidgets.QSpinBox, "buffer_size").valueChanged.connect(self.update_buffer_size)
 ############################################################################################################################
 
         # Ocultar Rarrow al inicio
@@ -223,10 +225,10 @@ class MainApp(QtWidgets.QMainWindow):
 
     #Iniciar Traduccion
     def start_translation(self):
-        if not config.recording_active:
+        if not cfg.recording_active:
             print("Iniciando traducción...")
-            config.recording_active = True 
-            print(config.recording_active) 
+            cfg.recording_active = True 
+            print(cfg.recording_active) 
 
             # Obtener el índice del micrófono seleccionado
             microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
@@ -234,12 +236,19 @@ class MainApp(QtWidgets.QMainWindow):
             mic_index = self.microphone_mapping.get(selected_microphone_name)  # Obtener el índice real del dispositivo
 
             try:
+                print(f"Valores pasados: {settings}")
+                # Recargar valores desde el JSON
+                load_settings()
+                # Realizar cálculos dinámicos nuevamente
+                calcular_valores_dinamicos()
+
                 # Intentar iniciar la grabación con el micrófono seleccionado
                 self.recording_thread = AudioRecordingThread(self.translator, self, mic_index)
                 self.recording_thread.start()
 
                 # Actualizar la interfaz
                 self.success_msg("Traduccion iniciada, prueba hablar")
+                print(f"Valores nuevos: {settings}")
             except Exception as e:
                 print(f"Error al intentar grabar con el micrófono: {e}")
 
@@ -255,7 +264,7 @@ class MainApp(QtWidgets.QMainWindow):
                 self.error_msg(f"El micrófono '{current_item}' causó un error. Por favor, elige otro.")
 
                 # Establecer recording_active como False para evitar bloqueos
-                config.recording_active = False
+                cfg.recording_active = False
         else:
             print("La grabación ya está activa.")
 
@@ -264,7 +273,7 @@ class MainApp(QtWidgets.QMainWindow):
         stop_recording()  # Detiene la grabación
         print("Parando traducción...")
         # Reiniciar el estado de las variables
-        config.recording_active = False  # Asegúrate de que recording_active se establezca en False
+        cfg.recording_active = False  # Asegúrate de que recording_active se establezca en False
         self.info_msg("Traduccion detenida")
 
 
@@ -545,7 +554,8 @@ class MainApp(QtWidgets.QMainWindow):
             "VAD": self.findChild(QtWidgets.QSpinBox, "vad").value(),
             "TEMP_DIR": self.findChild(QtWidgets.QLineEdit, "temp_dir").text(),
             "THRESHOLD": self.findChild(QtWidgets.QSpinBox, "threshold").value(),
-            "WHISPER_MODEL": self.whisper_model
+            "WHISPER_MODEL": self.whisper_model,
+            "BUFFER_SIZE": self.findChild(QtWidgets.QSpinBox, "buffer_size").value(),
         }
 
         # Guardar en el archivo JSON
@@ -675,6 +685,11 @@ class MainApp(QtWidgets.QMainWindow):
         # Obtener el modelo en minúsculas usando el diccionario
         self.whisper_model = model_mapping.get(model, "base")  # Valor por defecto es "base"
         print(f"Modelo Whisper en minúsculas: {self.whisper_model}")  # Mensaje de depuración
+
+    def update_buffer_size(self):
+        """Actualiza la ventana de voz basada en el input del usuario."""
+        buffer_size = self.findChild(QtWidgets.QSpinBox, "buffer_size").value()
+        print(f"Tamaño de buffer actualizado a: {buffer_size}")  # Mensaje de depuración
 
 ##################################################################################################################
     #Funciones para tomar correctamente los valores de los inputs de estilos de texto

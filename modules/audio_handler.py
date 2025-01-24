@@ -8,24 +8,29 @@ import pyaudio
 import webrtcvad
 import numpy as np
 import threading
-from config import config
 import time
 from modules.speech_processing import process_audio
 from PyQt5.QtCore import QThread, pyqtSignal
 from modules.circular_buffer import CircularBuffer
 import asyncio
 
+import config.configuracion as cfg
+from config.configuracion import settings, load_settings, calcular_valores_dinamicos
+
+load_settings()
+calcular_valores_dinamicos()
+
 # Configuración de audio
 audio = pyaudio.PyAudio()
 stream = audio.open(format=pyaudio.paInt16,
                     channels=1,
-                    rate=config.RATE,
+                    rate=settings["RATE"],
                     input=True,
-                    frames_per_buffer=config.CHUNK)
-vad = webrtcvad.Vad(config.VAD)  # Sensibilidad del mic
+                    frames_per_buffer=cfg.CHUNK)
+vad = webrtcvad.Vad(settings["VAD"])  # Sensibilidad del mic
 
 # Variables globales
-audio_buffer = CircularBuffer(size=config.BUFFER_SIZE)
+audio_buffer = CircularBuffer(size=settings["BUFFER_SIZE"])
 is_speaking = False
 silence_counter = 0
 lock = threading.Lock()
@@ -46,7 +51,7 @@ class AudioProcessingThread(QThread):
         self.finished_processing.emit(translated_text)  # Emitir la señal con el texto traducido
 
 def save_temp_audio(frames, file_suffix=""):
-    temp_dir = config.TEMP_DIR
+    temp_dir = settings["TEMP_DIR"]
     os.makedirs(temp_dir, exist_ok=True)
     timestamp = int(time.time())
     temp_file_path = os.path.join(temp_dir, f"temp_audio_{timestamp}{file_suffix}.wav")
@@ -54,12 +59,12 @@ def save_temp_audio(frames, file_suffix=""):
     with wave.open(temp_file_path, 'wb') as wf:
         wf.setnchannels(1)
         wf.setsampwidth(audio.get_sample_size(pyaudio.paInt16))
-        wf.setframerate(config.RATE)
+        wf.setframerate(settings["RATE"])
         wf.writeframes(b''.join(frames))
 
     return temp_file_path
 
-def is_loud_enough(frame, threshold=config.THRESHOLD):
+def is_loud_enough(frame, threshold=settings["THRESHOLD"]):
     audio_data = np.frombuffer(frame, dtype=np.int16)
     avg_volume = np.abs(audio_data).mean()
     return avg_volume > threshold
@@ -79,20 +84,20 @@ def record_audio(translator, app_instance, mic_index):
 
     stream = audio.open(format=pyaudio.paInt16,
                         channels=1,
-                        rate=config.RATE,
+                        rate=settings["RATE"],
                         input=True,
-                        frames_per_buffer=config.CHUNK,
+                        frames_per_buffer=cfg.CHUNK,
                         input_device_index=mic_index)
 
     print("Iniciando grabación...")  # Mensaje de depuración
     start_time = time.time()  # Inicializa start_time al principio de la función
 
-    while config.recording_active:
+    while cfg.recording_active:
         #print("Grabando...")  # Mensaje de depuración
-        frame = stream.read(config.CHUNK, exception_on_overflow=False)
+        frame = stream.read(cfg.CHUNK, exception_on_overflow=False)
         try:
             # Detecta si es voz o si el volumen es lo suficientemente alto
-            is_voice = vad.is_speech(frame, config.RATE) or is_loud_enough(frame)
+            is_voice = vad.is_speech(frame, settings["RATE"]) or is_loud_enough(frame)
             #\print(f"¿Es voz? {is_voice}")  # Mensaje de depuración
         except webrtcvad.Error as e:
             print(f"Error en VAD: {e}")
@@ -103,9 +108,9 @@ def record_audio(translator, app_instance, mic_index):
             audio_buffer.append(frame)
             is_speaking = True
 
-            if time.time() - start_time > config.MAX_CONTINUOUS_SPEECH_TIME:
+            if time.time() - start_time > settings["MAX_CONTINUOUS_SPEECH_TIME"]:
                 # Cortes inteligentes
-                cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
+                cut_index = int(settings["CUT_TIME"] * settings["RATE"] / cfg.CHUNK)
                 temp_audio = audio_buffer.get_data()[-cut_index:]
                 temp_file = save_temp_audio(temp_audio)
                 audio_thread = AudioProcessingThread(temp_file, translator)
@@ -118,10 +123,10 @@ def record_audio(translator, app_instance, mic_index):
         elif is_speaking:
             # Si hay silencio después de haber hablado, aumenta el contador
             silence_counter += 1
-            if silence_counter > int(config.RATE / config.CHUNK * config.VOICE_WINDOW):
+            if silence_counter > int(settings["RATE"] / cfg.CHUNK * settings["VOICE_WINDOW"]):
                 # Si el buffer tiene suficiente duración, lo guarda
-                if len(audio_buffer.get_data()) >= int(config.MIN_VOICE_DURATION * config.RATE / config.CHUNK):
-                    cut_index = int(config.CUT_TIME * config.RATE / config.CHUNK)
+                if len(audio_buffer.get_data()) >= int(settings["MIN_VOICE_DURATION"] * settings["RATE"] / cfg.CHUNK):
+                    cut_index = int(settings["CUT_TIME"] * settings["RATE"] / cfg.CHUNK)
                     temp_audio = audio_buffer.get_data()[-cut_index:]  # Toma solo los últimos 2 segundos
                     temp_file = save_temp_audio(temp_audio)
                     # Usar QThread para el procesamiento de audio
@@ -137,7 +142,7 @@ def record_audio(translator, app_instance, mic_index):
         else:
             # Si no hay voz detectada, incrementa el contador de silencio
             silence_counter += 1
-            if silence_counter > int(config.RATE / config.CHUNK * config.MAX_CONTINUOUS_SPEECH_TIME):
+            if silence_counter > int(settings["RATE"] / cfg.CHUNK * settings["MAX_CONTINUOUS_SPEECH_TIME"]):
                 # Si ha pasado el tiempo máximo sin voz, resetea el contador
                 silence_counter = 0
                 start_time = time.time()  # Reinicia el tiempo para una nueva grabación
@@ -145,7 +150,7 @@ def record_audio(translator, app_instance, mic_index):
 
 def stop_recording():
     global audio_buffer
-    config.recording_active = False
+    cfg.recording_active = False
     audio_buffer.clear()
     print("Deteniendo la grabación...")
     stream.stop_stream()  # Detener el flujo de audio
