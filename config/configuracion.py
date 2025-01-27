@@ -6,8 +6,8 @@ translated_text = "Texto Default"
 recording_active = False  # Inicializa en False
 
 # Modelos Spacy
-SPACY_MODEL_ES = "es_core_news_md"  # Modelo spaCy para segmentación de oraciones en español
-SPACY_MODEL_EN = "en_core_web_md"  # Modelo spaCy para segmentación de oraciones en ingles
+SPACY_MODEL_ES = ".\\_internal\\spacy_models\\es_core_news_md"  # Modelo spaCy para segmentación de oraciones en español
+SPACY_MODEL_EN = ".\\_internal\\spacy_models\\en_core_web_md"  # Modelo spaCy para segmentación de oraciones en ingles
 
 # Obtener la ruta absoluta del archivo JSON
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

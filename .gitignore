@@ -2,8 +2,9 @@ node_modules
 __init__.py
 package-lock.json
 package.json
-script.py
 prueba.py
+get-pip.py
+script.py
 /Overlay
 /Config_page
 /audio_test
@@ -15,3 +16,7 @@ prueba.py
 /modules/__pycache__
 /config/__pycache__
 /config/settings.py
+/build
+/dist
+
+
