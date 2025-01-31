@@ -9,8 +9,7 @@ import logging
 logging.basicConfig(filename='app.log', level=logging.DEBUG)
 
 import whisper
-#from googletrans import Translator
-from google.cloud import translate_v2 as translate
+from transformers import MarianMTModel, MarianTokenizer
 import html
 import spacy
 import config.configuracion as cfg
@@ -19,9 +18,16 @@ import asyncio
 
 load_settings()
 
+semaphore = asyncio.Semaphore(3)  # Permite un máximo de 3 tareas simultáneas
+
 # Cargar modelos
 model = whisper.load_model(settings["WHISPER_MODEL"])
-# translator = Translator()
+
+model_es_en = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-es-en")
+tokenizer_es_en = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-es-en")
+
+model_en_es = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-es")
+tokenizer_en_es = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
 
 if getattr(sys, 'frozen', False):
     # Ruta del archivo empaquetado
@@ -29,27 +35,22 @@ if getattr(sys, 'frozen', False):
 else:
     # Ruta durante el desarrollo
     base_path = os.path.dirname(__file__)
-    
-def get_resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        # Ruta en caso de estar empaquetado
-        base_path = sys._MEIPASS
-    else:
-        # Ruta en modo desarrollo
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-json_path = get_resource_path("credentials/service_account.json")
-translator = translate.Client.from_service_account_json(json_path)
 
 nlp_es = spacy.load(cfg.SPACY_MODEL_ES)
 nlp_en = spacy.load(cfg.SPACY_MODEL_EN)
 
+async def transcribe_and_translate_limited(audio_file):
+    async with semaphore:
+        return await transcribe_and_translate(audio_file)
 
-def translate_text(text, target_language):
-    result = translator.translate(text, target_language=target_language)
-    #html.unescape para poder imprimir caracteres especiales
-    translated_text = html.unescape(result['translatedText'])
+
+async def translate_marian(text, tokenizer, model):
+    # Tokenizar el texto
+    encoded_text = tokenizer(text, return_tensors="pt", truncation=True)
+    # Generar traducción
+    translated_tokens = model.generate(**encoded_text)
+    # Decodificar la traducción
+    translated_text = tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
     return translated_text
 
 async def transcribe_and_translate(audio_file):
@@ -80,10 +81,8 @@ async def transcribe_and_translate(audio_file):
         # Segmentación del texto usando spaCy según el idioma detectado
         if detected_language == "es":
             doc = nlp_es(text)
-            target_language = 'en'
         elif detected_language == "en":
             doc = nlp_en(text)
-            target_language = 'es'
         else:
             logging.debug("Idioma no soportado.")
             return None
@@ -93,11 +92,19 @@ async def transcribe_and_translate(audio_file):
         # Dividir el texto en partes más pequeñas basadas en las pausas naturales
         translated_sentences = []
         for sentence in sentences:
-            translated_result = await asyncio.to_thread(translate_text, sentence, target_language)
-            translated_sentences.append(translated_result)
+            if detected_language == "es":
+                translated_result = await translate_marian(text, tokenizer_es_en, model_es_en)
+                if translated_result not in translated_sentences:  # Evitar duplicados
+                    translated_sentences.append(translated_result)
+            elif detected_language == "en":
+                translated_result = await translate_marian(text, tokenizer_en_es, model_en_es)
+                if translated_result not in translated_sentences:  # Evitar duplicados
+                    translated_sentences.append(translated_result)
+            else:
+                translated_sentences.append(sentence)
         
         translated_text = " ".join(translated_sentences)
-        
+        logging.debug(f"Texto final traducido: {translated_text}")
         return translated_text
     
     except FileNotFoundError as e:
@@ -108,20 +115,20 @@ async def transcribe_and_translate(audio_file):
 
 async def process_audio(audio_file, translator):
     try:
-        translated_text = await transcribe_and_translate(audio_file)
+        translated_text = await transcribe_and_translate_limited(audio_file)
         if translated_text:  # Solo actualiza si hay texto traducido
             cfg.translated_text = translated_text
-            logging.debug(f"Texto traducido: {cfg.translated_text}")
+            logging.debug(f"Texto traducido del process: {cfg.translated_text}")
             translator.update_translated_text()
         else:
             logging.debug("No se actualiza el texto traducido porque está vacío.")
     except Exception as e:
         logging.debug(f"Error en el procesamiento de audio: {e}")
-    # finally:
-    #     try:
-    #         os.remove(audio_file)
-    #     except Exception as e:
-    #         logging.debug(f"Error al eliminar archivo: {e}")
+    finally:
+        try:
+            os.remove(audio_file)
+        except Exception as e:
+            logging.debug(f"Error al eliminar archivo: {e}")
 
 
 
