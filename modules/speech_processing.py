@@ -10,24 +10,23 @@ logging.basicConfig(filename='app.log', level=logging.DEBUG)
 
 import whisper
 from transformers import MarianMTModel, MarianTokenizer
-import html
-import spacy
+from pysbd import Segmenter  
 import config.configuracion as cfg
 from config.configuracion import settings, load_settings
 import asyncio
 
 load_settings()
 
-semaphore = asyncio.Semaphore(3)  # Permite un máximo de 3 tareas simultáneas
+semaphore = asyncio.Semaphore(3)  # Permite un máximo de 3 hilos simultáneos
 
 # Cargar modelos
-model = whisper.load_model(settings["WHISPER_MODEL"])
+model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
 
-model_es_en = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-es-en")
-tokenizer_es_en = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-es-en")
+model_es_en = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_ES).eval()
+tokenizer_es_en = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_ES)
 
-model_en_es = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-es")
-tokenizer_en_es = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-es")
+model_en_es = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_EN).eval()
+tokenizer_en_es = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_EN)
 
 if getattr(sys, 'frozen', False):
     # Ruta del archivo empaquetado
@@ -36,8 +35,18 @@ else:
     # Ruta durante el desarrollo
     base_path = os.path.dirname(__file__)
 
-nlp_es = spacy.load(cfg.SPACY_MODEL_ES)
-nlp_en = spacy.load(cfg.SPACY_MODEL_EN)
+# nlp_es = spacy.load(cfg.SPACY_MODEL_ES, disable=["parser", "ner", "lemmatizer"])
+# nlp_es.add_pipe("sentencizer")  # Añade el sentencizer al pipeline
+# nlp_en = spacy.load(cfg.SPACY_MODEL_EN, disable=["parser", "ner", "lemmatizer"])
+# nlp_en.add_pipe("sentencizer")  # Añade el sentencizer al pipeline
+
+def cleanup_memory():
+    """Limpieza optimizada sin spaCy"""
+    import gc, torch
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    logging.debug("Limpieza de memoria realizada.")
 
 async def transcribe_and_translate_limited(audio_file):
     async with semaphore:
@@ -45,13 +54,20 @@ async def transcribe_and_translate_limited(audio_file):
 
 
 async def translate_marian(text, tokenizer, model):
-    # Tokenizar el texto
-    encoded_text = tokenizer(text, return_tensors="pt", truncation=True)
-    # Generar traducción
-    translated_tokens = model.generate(**encoded_text)
-    # Decodificar la traducción
-    translated_text = tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
-    return translated_text
+    try:
+        # Tokenizar el texto
+        encoded_text = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        # Generar traducción
+        translated_tokens = model.generate(**encoded_text)
+        # Decodificar la traducción
+        translated_text = tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
+        return translated_text
+    finally:
+        # Liberar tensores y memoria
+        del encoded_text, translated_tokens
+        import torch
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+
 
 async def transcribe_and_translate(audio_file):
     logging.debug(f'Archivo pasado al Transcribe: {audio_file}')
@@ -69,6 +85,8 @@ async def transcribe_and_translate(audio_file):
         # Extrae el texto de la transcripción
         text = result.get('text', None)
         logging.debug(f"Texto transcripto: {text}")
+        # Limpieza de memoria al finalizar la transcripcion
+        cleanup_memory()
         
         if not text:
             logging.debug("La transcripción está vacía.")
@@ -78,33 +96,31 @@ async def transcribe_and_translate(audio_file):
         detected_language = result['language']
         logging.debug(f"Idioma detectado: {detected_language}")
 
-        # Segmentación del texto usando spaCy según el idioma detectado
-        if detected_language == "es":
-            doc = nlp_es(text)
-        elif detected_language == "en":
-            doc = nlp_en(text)
-        else:
-            logging.debug("Idioma no soportado.")
-            return None
-        
-        sentences = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+        # Segmentación con PySBD
+        lang_code = 'es' if detected_language == 'es' else 'en'
+        segmenter = Segmenter(language=lang_code, clean=False)
+        sentences = segmenter.segment(text)
+        sentences = [s.strip() for s in sentences if s.strip()]
         
         # Dividir el texto en partes más pequeñas basadas en las pausas naturales
         translated_sentences = []
         for sentence in sentences:
+            # Definir 'translated' en todos los casos
             if detected_language == "es":
-                translated_result = await translate_marian(text, tokenizer_es_en, model_es_en)
-                if translated_result not in translated_sentences:  # Evitar duplicados
-                    translated_sentences.append(translated_result)
+                translated = await translate_marian(sentence, tokenizer_es_en, model_es_en)
             elif detected_language == "en":
-                translated_result = await translate_marian(text, tokenizer_en_es, model_en_es)
-                if translated_result not in translated_sentences:  # Evitar duplicados
-                    translated_sentences.append(translated_result)
+                translated = await translate_marian(sentence, tokenizer_en_es, model_en_es)
             else:
-                translated_sentences.append(sentence)
+                translated = sentence  # Para otros idiomas
+            
+            # Ahora 'translated' siempre está definido
+            if translated not in translated_sentences:
+                translated_sentences.append(translated)
         
         translated_text = " ".join(translated_sentences)
         logging.debug(f"Texto final traducido: {translated_text}")
+        # Limpieza de memoria tras la traducción
+        cleanup_memory()
         return translated_text
     
     except FileNotFoundError as e:
@@ -129,6 +145,8 @@ async def process_audio(audio_file, translator):
             os.remove(audio_file)
         except Exception as e:
             logging.debug(f"Error al eliminar archivo: {e}")
+        # Limpieza de memoria al finalizar el proceso
+        cleanup_memory()
 
 
 
