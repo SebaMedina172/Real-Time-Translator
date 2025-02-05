@@ -50,12 +50,12 @@ class MainApp(QtWidgets.QMainWindow):
         super(MainApp, self).__init__()
         # Carga el archivo .ui
         # ui_file_path = os.path.join(os.path.dirname(__file__), 'RTT_dock.ui')
-        uic.loadUi('.\\_internal\\ui\\RTT_dock.ui', self)  # Cargar el archivo .ui
+        uic.loadUi('.\\ui\\RTT_dock.ui', self)  # Cargar el archivo .ui
         # uic.loadUi("../ui/RTT.ui", self)
-        config_style_path = os.path.join(os.path.dirname(__file__), '.\\config\\interface_config.json')
+        config_style_path = os.path.join(os.path.dirname(__file__), '..\\config\\interface_config.json')
         self.config_style_file = config_style_path
 
-        config_audio_path = os.path.join(os.path.dirname(__file__), '.\\config\\audio_config.json')
+        config_audio_path = os.path.join(os.path.dirname(__file__), '..\\config\\audio_config.json')
         self.config_audio_file = config_audio_path
 
         self.whisper_model = "base"  # Atributo para almacenar el modelo en minúsculas
@@ -202,9 +202,9 @@ class MainApp(QtWidgets.QMainWindow):
         self.play.setText("") 
         self.pause.setText("")
         self.config.setText("")
-        self.play.setIcon(QIcon(".\\_internal\\ui\\imgs\\play_white.svg"))
-        self.pause.setIcon(QIcon(".\\_internal\\ui\\imgs\\stop_white.svg"))
-        self.config.setIcon(QIcon(".\\_internal\\ui\\imgs\\config_white.svg"))
+        self.play.setIcon(QIcon(".\\ui\\imgs\\play_white.svg"))
+        self.pause.setIcon(QIcon(".\\ui\\imgs\\stop_white.svg"))
+        self.config.setIcon(QIcon(".\\ui\\imgs\\config_white.svg"))
 
         self.Larrow.hide()  # Ocultar Larrow
         self.Rarrow.show()  # Mostrar Rarrow
@@ -788,10 +788,10 @@ class MainApp(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     # Configura el icono global de la aplicación
-    app.setWindowIcon(QtGui.QIcon('.\\_internal\\ui\\imgs\\icon.ico'))  # Ruta al icono
+    app.setWindowIcon(QtGui.QIcon('.\\ui\\imgs\\icon.ico'))  # Ruta al icono
 
     window = MainApp()  # Crea la ventana principal
-    window.setWindowIcon(QtGui.QIcon('.\\_internal\\ui\\imgs\\icon.ico'))  # Configura el icono para la ventana
+    window.setWindowIcon(QtGui.QIcon('.\\ui\\imgs\\icon.ico'))  # Configura el icono para la ventana
     window.show()
 
     sys.exit(app.exec_())
