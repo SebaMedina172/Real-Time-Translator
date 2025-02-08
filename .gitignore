@@ -3,6 +3,7 @@ __init__.py
 package-lock.json
 package.json
 get-pip.py
+worker.py
 /Overlay
 /Config_page
 /audio_test
@@ -16,7 +17,6 @@ get-pip.py
 /config/settings.py
 /build
 /dist
-prueba.spec
 /config
 /modules
 /ui

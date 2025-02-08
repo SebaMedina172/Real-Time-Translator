@@ -541,7 +541,7 @@
 #     main()
 
 ####################################################################################
-
+import re
 import os
 import time
 import threading
@@ -550,43 +550,52 @@ import sounddevice as sd
 import soundfile as sf
 import whisper
 import sys
+import translator  # Módulo compartido de traducción
 
-# Variables globales para la transcripción parcial acumulada
+# Variables globales para transcripción y traducción parcial
 final_transcription = ""
 current_sentence = ""
+transcription_text = ""    # Acumula la transcripción en el idioma original
+translated_text = ""       # Guarda la última traducción generada
+last_translated_source = ""  # Para comparar y evitar llamadas redundantes
 
 # ================================
 # CONFIGURACIONES
 # ================================
 SAMPLERATE = 16000         # Tasa de muestreo (Hz)
 CHANNELS = 1
-# Configuraciones nuevas
-DETECTION_THRESHOLD = 0.01      # Para detectar voz en el callback (no modificar este valor a menos que sepas calibrar)
+DETECTION_THRESHOLD = 0.01      # Umbral para detectar voz en el callback
 TRIM_THRESHOLD = 0.01           # Para recortar silencios al guardar el segmento
-MAX_SEGMENT_DURATION = 7.0     # Máximo de segundos que se permite acumular en el buffer   
-SILENCE_DURATION = 0.5          # Duración de silencio (en segundos) para considerar que se terminó de hablar
-PARTIAL_WINDOW_DURATION = 2.0   # Duración de la ventana para transcripción parcial (en segundos)
-PARTIAL_UPDATE_INTERVAL = 0.5   # Intervalo para actualizar la transcripción parcial (en segundos)
+MAX_SEGMENT_DURATION = 7.0      # Duración máxima del buffer
+SILENCE_DURATION = 0.5          # Duración mínima de silencio para finalizar el segmento
+PARTIAL_WINDOW_DURATION = 2.0   # Duración de la ventana para transcripción parcial
+PARTIAL_UPDATE_INTERVAL = 0.5   # Intervalo de actualización (ajústalo si es necesario)
 
-# Directorio donde se guardarán los segmentos con voz
+# Directorio de segmentos
 SEGMENTS_DIR = "segments"
 os.makedirs(SEGMENTS_DIR, exist_ok=True)
 
-# Cargar el modelo rápido para transcripción parcial (por ejemplo, "tiny")
+# Cargar modelo de transcripción "tiny"
 partial_model = whisper.load_model("tiny")
 
 # ================================
 # VARIABLES COMPARTIDAS
 # ================================
-current_buffer = []      # Acumula muestras del segmento en curso
+current_buffer = []      # Buffer para muestras de audio
 buffer_lock = threading.Lock()
-last_voice_time = None   # Guarda la marca de tiempo de la última detección de voz
-segment_start_time = None  # Marca el inicio del segmento actual
+last_voice_time = None   # Última marca de voz
+segment_start_time = None  # Inicio del segmento actual
 
 # ================================
-# FUNCION PARA RECORTAR SILENCIOS
+# FUNCIONES DE UTILIDAD
 # ================================
+def clean_text(text):
+    """Filtra repeticiones excesivas de 'no'."""
+    cleaned = re.sub(r'(\bno\b[\s,]*){3,}', 'no ', text, flags=re.IGNORECASE)
+    return cleaned.strip()
+
 def trim_silence(audio, threshold=TRIM_THRESHOLD):
+    """Recorta los silencios al inicio y al final."""
     audio = np.array(audio)
     indices = np.where(np.abs(audio) > threshold)[0]
     if indices.size:
@@ -596,14 +605,11 @@ def trim_silence(audio, threshold=TRIM_THRESHOLD):
     else:
         return np.array([], dtype=audio.dtype)
 
-# ================================
-# VERIFICAR SI HAY CONTENIDO EN LOS AUDIOS
-# ================================
 def is_significant(audio, min_duration=0.3, min_peak=0.02):
+    """Verifica que el audio tenga suficiente duración y pico."""
     duration = len(audio) / SAMPLERATE
     peak = np.max(np.abs(audio)) if len(audio) > 0 else 0
     return duration >= min_duration and peak >= min_peak
-
 
 # ================================
 # CALLBACK DE CAPTURA DE AUDIO
@@ -615,10 +621,8 @@ def audio_callback(indata, frames, time_info, status):
     data = indata[:, 0].tolist()
     with buffer_lock:
         current_buffer.extend(data)
-        # Si la amplitud supera el umbral de detección, actualizamos la marca de voz
         if np.abs(np.array(data)).mean() > DETECTION_THRESHOLD:
             last_voice_time = time.time()
-            # Si es el comienzo de un segmento, se guarda el timestamp
             if segment_start_time is None:
                 segment_start_time = time.time()
 
@@ -626,7 +630,7 @@ def audio_callback(indata, frames, time_info, status):
 # HILO DE TRANSCRIPCIÓN PARCIAL
 # ================================
 def partial_transcription_thread():
-    global current_sentence, final_transcription
+    global current_sentence, final_transcription, transcription_text, translated_text, last_translated_source
     while True:
         time.sleep(PARTIAL_UPDATE_INTERVAL)
         with buffer_lock:
@@ -635,23 +639,39 @@ def partial_transcription_thread():
             window = current_buffer[-int(SAMPLERATE * PARTIAL_WINDOW_DURATION):]
         audio_chunk = np.array(window, dtype=np.float32)
         try:
-            result = partial_model.transcribe(audio_chunk, fp16=False, language="es", task="transcribe")
+            # Transcribir (puedes forzar el idioma si es necesario, p.ej.: language="es")
+            result = partial_model.transcribe(audio_chunk, fp16=False, task="transcribe")
             new_partial = result["text"].strip()
 
-            # Si el nuevo parcial extiende el current_sentence, acumulamos
+            # Acumulación progresiva:
             if new_partial.startswith(current_sentence):
-                # Se extrae la parte nueva
                 appended = new_partial[len(current_sentence):]
                 current_sentence += appended
             else:
-                # Si no es extensión, consideramos que la frase anterior se terminó
                 if current_sentence:
                     final_transcription += current_sentence + " "
                 current_sentence = new_partial
 
-            # Para efectos de visualización, se muestra la transcripción acumulada hasta el momento:
-            full_text = final_transcription + current_sentence
-            sys.stdout.write("\r[Parcial] " + full_text + " " * 10)
+            # Actualizar la transcripción completa:
+            transcription_text = (final_transcription + current_sentence).strip()
+            transcription_text = clean_text(transcription_text)
+            
+            # Solo traducir si la transcripción tiene longitud suficiente
+            if len(transcription_text) >= 10:
+                # Obtener el idioma; si no es confiable, puedes forzarlo a "es" o "en"
+                detected_lang = result.get("language", "es")
+                # Opcional: si el idioma no es "es" ni "en", forzar uno
+                if detected_lang not in ["es", "en"]:
+                    detected_lang = "es"
+                # Actualizar la traducción solo si el contenido ha cambiado
+                if transcription_text != last_translated_source:
+                    translated_text = translator.translate_text(transcription_text, detected_lang)
+                    last_translated_source = transcription_text
+                display_text = "[Traducido] " + translated_text
+            else:
+                display_text = "[Parcial] " + transcription_text
+
+            sys.stdout.write("\r" + display_text + " " * 10)
             sys.stdout.flush()
         except Exception as e:
             sys.stdout.write("\rError en transcripción parcial: " + str(e) + " " * 10)
@@ -661,12 +681,11 @@ def partial_transcription_thread():
 # HILO DE DETECCIÓN DE SILENCIO Y GUARDADO DEL SEGMENTO
 # ================================
 def segment_writer_thread():
-    global current_buffer, last_voice_time, segment_start_time, current_sentence, final_transcription
+    global current_buffer, last_voice_time, segment_start_time, current_sentence, final_transcription, transcription_text, translated_text, last_translated_source
     while True:
         time.sleep(0.1)
         now = time.time()
         with buffer_lock:
-            # Condición para finalizar el segmento: ha pasado SILENCE_DURATION o se excede el máximo
             if last_voice_time is not None and (now - last_voice_time) >= SILENCE_DURATION:
                 flush_segment = True
             elif segment_start_time is not None and (now - segment_start_time) >= MAX_SEGMENT_DURATION:
@@ -675,25 +694,23 @@ def segment_writer_thread():
                 flush_segment = False
 
             if flush_segment and current_buffer:
-                # Convertir buffer a numpy array y recortar silencios
                 segment = np.array(current_buffer, dtype=np.float32)
                 trimmed_segment = trim_silence(segment, threshold=TRIM_THRESHOLD)
                 
                 if is_significant(trimmed_segment):
-                    # Guardar el segmento como un archivo .wav
                     timestamp = int(time.time() * 1000)
                     filename = os.path.join(SEGMENTS_DIR, f"segment_{timestamp}.wav")
                     sf.write(filename, trimmed_segment, SAMPLERATE)
                     print(f"\n[Segmento guardado] {filename}")
-                    
-                    # Reiniciar transcripciones parciales y acumuladas
+                    # Reiniciar las variables de acumulación (y la caché de traducción)
                     current_sentence = ""
                     final_transcription = ""
-                    #print("\n[Transcripción reiniciada]")
+                    transcription_text = ""
+                    translated_text = ""
+                    last_translated_source = ""
                 else:
                     print("\n[Segmento descartado por falta de contenido significativo]")
                 
-                # Reiniciar buffer y variables
                 current_buffer = []
                 last_voice_time = None
                 segment_start_time = None
@@ -702,13 +719,11 @@ def segment_writer_thread():
 # FUNCIÓN PRINCIPAL
 # ================================
 def main():
-    # Iniciar hilos de transcripción parcial y escritura de segmento
     t_partial = threading.Thread(target=partial_transcription_thread, daemon=True)
     t_writer = threading.Thread(target=segment_writer_thread, daemon=True)
     t_partial.start()
     t_writer.start()
     
-    # Iniciar el stream de audio
     stream = sd.InputStream(callback=audio_callback, channels=CHANNELS, samplerate=SAMPLERATE)
     with stream:
         print("Grabando.\nHabla para iniciar el registro y, cuando pauses, se guardará el segmento.")
@@ -720,4 +735,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
