@@ -1,24 +1,17 @@
+from collections import deque
+
+
 class CircularBuffer:
     def __init__(self, size):
-        self.size = size
-        self.buffer = [None] * size
-        self.head = 0
-        self.tail = 0
-        self.full = False
+        # Se crea un deque con tamaño máximo (FIFO)
+        self.buffer = deque(maxlen=size)
 
     def append(self, item):
-        self.buffer[self.head] = item
-        if self.full:
-            self.tail = (self.tail + 1) % self.size  # Mueve el tail si está lleno
-        self.head = (self.head + 1) % self.size
-        self.full = self.head == self.tail  # Marca como lleno si head alcanza a tail
+        self.buffer.append(item)
 
     def get_data(self):
-        if self.full:
-            return self.buffer[self.tail:] + self.buffer[:self.head]
-        return self.buffer[self.tail:self.head]
+        # Se retorna una lista con los datos actuales
+        return list(self.buffer)
 
     def clear(self):
-        self.head = 0
-        self.tail = 0
-        self.full = False
+        self.buffer.clear()

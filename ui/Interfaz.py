@@ -2,14 +2,18 @@ import sys
 import os
 # Agregar la carpeta raíz al PYTHONPATH
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-#logging.debug(os.path.abspath(os.path.dirname(__file__)))
+#logger.debug(os.path.abspath(os.path.dirname(__file__)))
 
-import threading
-import time
 import logging
+from logging.handlers import RotatingFileHandler
 
-# Configurar el logger
-logging.basicConfig(filename='app.log', level=logging.DEBUG)
+# Configuración del logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = RotatingFileHandler('app.log', maxBytes=5 * 1024 * 1024, backupCount=5)  # 5 MB por archivo, hasta 5 backups
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 import json
 import pyaudio
@@ -22,7 +26,7 @@ import config.configuracion as cfg
 from config.configuracion import settings, load_settings, calcular_valores_dinamicos
 from modules.audio_handler import record_audio, stop_recording
 from modules.speech_processing import process_audio
-
+import threading
 
 class Translator(QObject):
     text_changed = pyqtSignal(str)
@@ -31,7 +35,7 @@ class Translator(QObject):
         super().__init__()
 
     def update_translated_text(self):
-        #logging.debug(f"Emitiendo texto traducido: '{cfg.translated_text}'")  # Mensaje de depuración
+        #logger.debug(f"Emitiendo texto traducido: '{cfg.translated_text}'")  # Mensaje de depuración
         if cfg.translated_text:  # Solo emite si hay texto
             self.text_changed.emit(cfg.translated_text)
 
@@ -50,12 +54,12 @@ class MainApp(QtWidgets.QMainWindow):
         super(MainApp, self).__init__()
         # Carga el archivo .ui
         # ui_file_path = os.path.join(os.path.dirname(__file__), 'RTT_dock.ui')
-        uic.loadUi('.\\_internal\\ui\\RTT_dock.ui', self)  # Cargar el archivo .ui
+        uic.loadUi('.\\ui\\RTT_dock.ui', self)  # Cargar el archivo .ui
         # uic.loadUi("../ui/RTT.ui", self)
-        config_style_path = os.path.join(os.path.dirname(__file__), '.\\config\\interface_config.json')
+        config_style_path = os.path.join(os.path.dirname(__file__), '..\\config\\interface_config.json')
         self.config_style_file = config_style_path
 
-        config_audio_path = os.path.join(os.path.dirname(__file__), '.\\config\\audio_config.json')
+        config_audio_path = os.path.join(os.path.dirname(__file__), '..\\config\\audio_config.json')
         self.config_audio_file = config_audio_path
 
         self.whisper_model = "base"  # Atributo para almacenar el modelo en minúsculas
@@ -148,11 +152,11 @@ class MainApp(QtWidgets.QMainWindow):
                         microphone_combo_box.addItem(name)
                         microphone_combo_box.setItemData(microphone_combo_box.count() - 1,name, Qt.ToolTipRole)
                         self.microphone_mapping[name] = i
-                        logging.debug(f"Micrófono válido añadido: {name}")
+                        logger.debug(f"Micrófono válido añadido: {name}")
                     #else:
-                        logging.debug(f"Micrófono omitido por alta latencia: {name}")
+                        logger.debug(f"Micrófono omitido por alta latencia: {name}")
                 except Exception as e:
-                    logging.debug(f"Error al probar el micrófono ({name}): {e}")
+                    logger.debug(f"Error al probar el micrófono ({name}): {e}")
 
         # Si no hay micrófonos válidos, añadir un mensaje al QComboBox
         if microphone_combo_box.count() == 0:
@@ -202,9 +206,9 @@ class MainApp(QtWidgets.QMainWindow):
         self.play.setText("") 
         self.pause.setText("")
         self.config.setText("")
-        self.play.setIcon(QIcon(".\\_internal\\ui\\imgs\\play_white.svg"))
-        self.pause.setIcon(QIcon(".\\_internal\\ui\\imgs\\stop_white.svg"))
-        self.config.setIcon(QIcon(".\\_internal\\ui\\imgs\\config_white.svg"))
+        self.play.setIcon(QIcon(".\\ui\\imgs\\play_white.svg"))
+        self.pause.setIcon(QIcon(".\\ui\\imgs\\stop_white.svg"))
+        self.config.setIcon(QIcon(".\\ui\\imgs\\config_white.svg"))
 
         self.Larrow.hide()  # Ocultar Larrow
         self.Rarrow.show()  # Mostrar Rarrow
@@ -230,9 +234,9 @@ class MainApp(QtWidgets.QMainWindow):
     #Iniciar Traduccion
     def start_translation(self):
         if not cfg.recording_active:
-            logging.debug("Iniciando traducción...")
+            logger.debug("Iniciando traducción...")
             cfg.recording_active = True 
-            logging.debug(cfg.recording_active) 
+            logger.debug(cfg.recording_active) 
 
             # Obtener el índice del micrófono seleccionado
             microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
@@ -240,7 +244,7 @@ class MainApp(QtWidgets.QMainWindow):
             mic_index = self.microphone_mapping.get(selected_microphone_name)  # Obtener el índice real del dispositivo
 
             try:
-                logging.debug(f"Valores pasados: {settings}")
+                logger.debug(f"Valores pasados: {settings}")
                 # Recargar valores desde el JSON
                 load_settings()
                 # Realizar cálculos dinámicos nuevamente
@@ -252,14 +256,14 @@ class MainApp(QtWidgets.QMainWindow):
 
                 # Actualizar la interfaz
                 self.success_msg("Traduccion iniciada, prueba hablar")
-                logging.debug(f"Valores nuevos: {settings}")
+                logger.debug(f"Valores nuevos: {settings}")
             except Exception as e:
-                logging.debug(f"Error al intentar grabar con el micrófono: {e}")
+                logger.debug(f"Error al intentar grabar con el micrófono: {e}")
 
                 # Si ocurre un error, eliminar el dispositivo del QComboBox
                 microphone_combo_box = self.findChild(QtWidgets.QComboBox, "microphoneComboBox")
                 current_item = microphone_combo_box.currentText()
-                logging.debug(f"Error con el micrófono: {current_item}")
+                logger.debug(f"Error con el micrófono: {current_item}")
 
                 # Eliminar el micrófono problemático de la lista
                 microphone_combo_box.removeItem(microphone_combo_box.currentIndex())
@@ -270,12 +274,12 @@ class MainApp(QtWidgets.QMainWindow):
                 # Establecer recording_active como False para evitar bloqueos
                 cfg.recording_active = False
         else:
-            logging.debug("La grabación ya está activa.")
+            logger.debug("La grabación ya está activa.")
 
     #Frenar Traduccion
     def stop_translation(self):
         stop_recording()  # Detiene la grabación
-        logging.debug("Parando traducción...")
+        logger.debug("Parando traducción...")
         # Reiniciar el estado de las variables
         cfg.recording_active = False  # Asegúrate de que recording_active se establezca en False
         self.info_msg("Traduccion detenida")
@@ -284,7 +288,7 @@ class MainApp(QtWidgets.QMainWindow):
 ########################################################################################################
     #Plantilla para mensajes de error
     def error_msg(self, new_text):
-        logging.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+        logger.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
 
         # Crear un nuevo mensaje con estilo fijo
         if new_text:
@@ -322,7 +326,7 @@ class MainApp(QtWidgets.QMainWindow):
     
     #Plantilla para mensajes de informacion
     def info_msg(self, new_text):
-        logging.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+        logger.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
 
         # Crear un nuevo mensaje con estilo fijo
         if new_text:
@@ -360,7 +364,7 @@ class MainApp(QtWidgets.QMainWindow):
     
     #Plantilla para mensajes de exito
     def success_msg(self, new_text):
-        logging.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+        logger.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
 
         # Crear un nuevo mensaje con estilo fijo
         if new_text:
@@ -398,7 +402,7 @@ class MainApp(QtWidgets.QMainWindow):
 
     # Plantilla para mensajes de configuracion
     def config_msg(self, new_text):
-        logging.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+        logger.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
 
         # Crear un nuevo mensaje con estilo fijo
         if new_text:
@@ -438,7 +442,7 @@ class MainApp(QtWidgets.QMainWindow):
 
     #Actualizar mensajes
     def update_text_edit(self, new_text):
-        logging.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
+        logger.debug(f"Actualizando texto: {new_text}")  # Mensaje de depuración
 
         # Crear un nuevo mensaje con estilo fijo
         if new_text:
@@ -532,7 +536,7 @@ class MainApp(QtWidgets.QMainWindow):
     #Guardar ambas configuraciones
     def save_all_config(self):
         """Guarda tanto la configuración de estilos de texto como la de audio."""
-        logging.debug("Guardando configuración...")
+        logger.debug("Guardando configuración...")
 
         # Guardar configuración de estilos de texto
         self.save_style_config()  # Esta es la función que ya tienes para guardar estilos
@@ -545,7 +549,7 @@ class MainApp(QtWidgets.QMainWindow):
     #Guardar configuracion de audio
     def save_audio_config(self):
         """Guarda la configuración de audio en el archivo JSON."""
-        logging.debug("Guardando configuración de audio...")
+        logger.debug("Guardando configuración de audio...")
 
         # Recoger los valores de los inputs
         audio_config = {
@@ -566,13 +570,13 @@ class MainApp(QtWidgets.QMainWindow):
         with open(self.config_audio_file, 'w') as f:
             json.dump(audio_config, f, indent=4)  # Usar indent=4 para mejorar la legibilidad
 
-        logging.debug("Configuración de audio guardada correctamente.")
+        logger.debug("Configuración de audio guardada correctamente.")
         # Opcional: Mostrar un mensaje al usuario
         #Infor MSG para despues
     
     #Guardar configuracion de estilos
     def save_style_config(self):
-        logging.debug("Guardando configuración de estilos...")
+        logger.debug("Guardando configuración de estilos...")
         """Guarda la configuración en el archivo JSON."""
         config = {
             "font_style": self.findChild(QtWidgets.QComboBox, "style_msg_box").currentText(),
@@ -623,51 +627,51 @@ class MainApp(QtWidgets.QMainWindow):
     def update_rate(self):
         """Actualiza la tasa de muestreo basada en el input del usuario."""
         rate = self.findChild(QtWidgets.QSpinBox, "rate").value()
-        logging.debug(f"Tasa de muestreo actualizada a: {rate} HZ")  # Mensaje de depuración
+        logger.debug(f"Tasa de muestreo actualizada a: {rate} HZ")  # Mensaje de depuración
     
     def update_chunk_duration(self):
         """Actualiza la duración del chunk basada en el input del usuario."""
         chunk_duration = self.findChild(QtWidgets.QSpinBox, "chunk_duration").value()
-        logging.debug(f"Duración del chunk actualizada a: {chunk_duration} ms")  # Mensaje de depuración
+        logger.debug(f"Duración del chunk actualizada a: {chunk_duration} ms")  # Mensaje de depuración
 
     def update_voice_window(self):
         """Actualiza la ventana de voz basada en el input del usuario."""
         voice_window = self.findChild(QtWidgets.QDoubleSpinBox, "voice_window").value()
-        logging.debug(f"Ventana de voz actualizada a: {voice_window} seg")  # Mensaje de depuración
+        logger.debug(f"Ventana de voz actualizada a: {voice_window} seg")  # Mensaje de depuración
     
     def update_min_voice_duration(self):
         """Actualiza la duracion minima de la voz basada en el input del usuario."""
         min_voice_duration = self.findChild(QtWidgets.QDoubleSpinBox, "min_voice_duration").value()
-        logging.debug(f"Duración mínima de voz actualizada a: {min_voice_duration} seg")  # Mensaje de depuración
+        logger.debug(f"Duración mínima de voz actualizada a: {min_voice_duration} seg")  # Mensaje de depuración
 
     def update_max_continuous_speech_time(self):
         """Actualiza la ventana de voz basada en el input del usuario."""
         max_continuous_speech_time = self.findChild(QtWidgets.QDoubleSpinBox, "max_continuous_speech_time").value()
-        logging.debug(f"Tiempo máximo de habla continua actualizado a: {max_continuous_speech_time} seg")  # Mensaje de depuración
+        logger.debug(f"Tiempo máximo de habla continua actualizado a: {max_continuous_speech_time} seg")  # Mensaje de depuración
 
     def update_cut_time(self):
         """Actualiza la ventana de voz basada en el input del usuario."""
         cut_time = self.findChild(QtWidgets.QDoubleSpinBox, "cut_time").value()
-        logging.debug(f"Tiempo de corte actualizado a: {cut_time} seg")  # Mensaje de depuración
+        logger.debug(f"Tiempo de corte actualizado a: {cut_time} seg")  # Mensaje de depuración
 
     def update_threshold(self):
         """Actualiza la ventana de voz basada en el input del usuario."""
         threshold = self.findChild(QtWidgets.QSpinBox, "threshold").value()
-        logging.debug(f"Umbral actualizado a: {threshold}")  # Mensaje de depuración
+        logger.debug(f"Umbral actualizado a: {threshold}")  # Mensaje de depuración
 
     def update_vad(self):
         """Actualiza la ventana de voz basada en el input del usuario."""
         vad = self.findChild(QtWidgets.QSpinBox, "vad").value()
-        logging.debug(f"VAD actualizado a: {vad}")  # Mensaje de depuración
+        logger.debug(f"VAD actualizado a: {vad}")  # Mensaje de depuración
     
     def update_temp_dir(self):
         """Actualiza la ruta temporal basada en el input del usuario."""
         temp_dir = self.findChild(QtWidgets.QLineEdit, "temp_dir").text()
-        logging.debug(f"Ruta temporal ingresada: {temp_dir}")  # Mensaje de depuración
+        logger.debug(f"Ruta temporal ingresada: {temp_dir}")  # Mensaje de depuración
 
         # Validar la ruta solo al perder el foco o al hacer clic en un botón
         if not os.path.exists(temp_dir) and temp_dir != "":
-            logging.debug("La ruta temporal no es válida. Por favor, ingresa una ruta existente.")
+            logger.debug("La ruta temporal no es válida. Por favor, ingresa una ruta existente.")
             self.error_msg("La ruta temporal no es válida. Por favor, ingresa una ruta existente.")
             # Aquí puedes limpiar el campo o establecer un valor predeterminado
             self.findChild(QtWidgets.QLineEdit, "temp_dir").clear()  # Limpiar el campo
@@ -675,7 +679,7 @@ class MainApp(QtWidgets.QMainWindow):
     def update_whisper_model(self):
         """Actualiza el modelo Whisper basado en el input del usuario."""
         model = self.findChild(QtWidgets.QComboBox, "whisper_model").currentText()
-        logging.debug(f"Modelo Whisper seleccionado: {model}")  # Mensaje de depuración
+        logger.debug(f"Modelo Whisper seleccionado: {model}")  # Mensaje de depuración
 
         # Diccionario para mapear modelos a sus versiones en minúsculas
         model_mapping = {
@@ -688,19 +692,19 @@ class MainApp(QtWidgets.QMainWindow):
 
         # Obtener el modelo en minúsculas usando el diccionario
         self.whisper_model = model_mapping.get(model, "base")  # Valor por defecto es "base"
-        logging.debug(f"Modelo Whisper en minúsculas: {self.whisper_model}")  # Mensaje de depuración
+        logger.debug(f"Modelo Whisper en minúsculas: {self.whisper_model}")  # Mensaje de depuración
 
     def update_buffer_size(self):
         """Actualiza la ventana de voz basada en el input del usuario."""
         buffer_size = self.findChild(QtWidgets.QSpinBox, "buffer_size").value()
-        logging.debug(f"Tamaño de buffer actualizado a: {buffer_size}")  # Mensaje de depuración
+        logger.debug(f"Tamaño de buffer actualizado a: {buffer_size}")  # Mensaje de depuración
 
 ##################################################################################################################
     #Funciones para tomar correctamente los valores de los inputs de estilos de texto
     def update_text_style(self):
         """Actualiza el estilo de texto basado en el input del usuario."""
         style = self.findChild(QtWidgets.QComboBox, "style_msg_box").currentText()
-        logging.debug(f"Estilo de texto actualizado a: {style}")  # Mensaje de depuración
+        logger.debug(f"Estilo de texto actualizado a: {style}")  # Mensaje de depuración
         # Aplicar el estilo a todas las etiquetas que desees
         for label in self.messages_layout.findChildren(QtWidgets.QLabel):
             label.setStyleSheet(f"font-family: {style};")
@@ -708,7 +712,7 @@ class MainApp(QtWidgets.QMainWindow):
     def update_text_size(self):
         """Actualiza el tamaño de texto basado en el input del usuario."""
         size = self.findChild(QtWidgets.QSpinBox, "size_msg_spin").value()
-        logging.debug(f"Tamaño de texto actualizado a: {size}")  # Mensaje de depuración
+        logger.debug(f"Tamaño de texto actualizado a: {size}")  # Mensaje de depuración
         # Aplicar el tamaño a todas las etiquetas que desees
         for label in self.messages_layout.findChildren(QtWidgets.QLabel):
             label.setStyleSheet(f"font-size: {size}px;")
@@ -716,11 +720,11 @@ class MainApp(QtWidgets.QMainWindow):
     def update_text_type(self):
         """Actualiza el tipo de texto basado en el input del usuario."""
         text_type = self.findChild(QtWidgets.QComboBox, "type_font_msg").currentText()
-        logging.debug(f"Tipo de texto actualizado a: {text_type}")  # Mensaje de depuración
+        logger.debug(f"Tipo de texto actualizado a: {text_type}")  # Mensaje de depuración
 
         # Convertir el tipo de fuente a minúsculas
         self.font_type = text_type.lower()  # Almacenar en minúsculas
-        logging.debug(f"Tipo de fuente en minúsculas: {self.font_type}")  # Mensaje de depuración
+        logger.debug(f"Tipo de fuente en minúsculas: {self.font_type}")  # Mensaje de depuración
         
         # Aplicar el tipo a todas las etiquetas que desees
         for label in self.messages_layout.findChildren(QtWidgets.QLabel):
@@ -732,12 +736,12 @@ class MainApp(QtWidgets.QMainWindow):
         if color.isValid():
             # Aplicar el color al botón y a las etiquetas
             self.findChild(QtWidgets.QPushButton, "color_msg_btn").setStyleSheet(f"color: {color.name()};")
-            logging.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
+            logger.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
 
     def update_border_thickness(self):
         """Actualiza el grosor del borde basado en el input del usuario."""
         thickness = self.findChild(QtWidgets.QSpinBox, "stroke_border_msg").value()
-        logging.debug(f"Grosor del borde actualizado a: {thickness}")  # Mensaje de depuración
+        logger.debug(f"Grosor del borde actualizado a: {thickness}")  # Mensaje de depuración
 
     def select_border_color_msg(self):
         """Selecciona el color del texto."""
@@ -745,7 +749,7 @@ class MainApp(QtWidgets.QMainWindow):
         if color.isValid():
             # Aplicar el color al botón y a las etiquetas
             self.findChild(QtWidgets.QPushButton, "color_border_msg").setStyleSheet(f"color: {color.name()};")
-            logging.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
+            logger.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
 
     def select_background_color_msg(self):
         """Selecciona el color del texto."""
@@ -753,12 +757,12 @@ class MainApp(QtWidgets.QMainWindow):
         if color.isValid():
             # Aplicar el color al botón y a las etiquetas
             self.findChild(QtWidgets.QPushButton, "color_bg_msg").setStyleSheet(f"color: {color.name()};")
-            logging.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
+            logger.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
     
     def update_opacity_bg(self):
         """Actualiza la opacidad del fondo de la consola."""
         opacity = self.findChild(QtWidgets.QDoubleSpinBox, "opacity_bg_console").value()
-        logging.debug(f"Opacidad del fondo de la consola actualizada a: {opacity}")  # Mensaje de depuración
+        logger.debug(f"Opacidad del fondo de la consola actualizada a: {opacity}")  # Mensaje de depuración
 
         # Eliminar cualquier efecto gráfico existente
         self.messages_container.setGraphicsEffect(None)
@@ -778,7 +782,7 @@ class MainApp(QtWidgets.QMainWindow):
         if color.isValid():
             # Aplicar el color al botón
             self.findChild(QtWidgets.QPushButton, "bg_color_console").setStyleSheet(f"background-color: {color.name()};")
-            logging.debug(f"Color de fondo de la consola seleccionado: {color.name()}")  # Mensaje de depuración
+            logger.debug(f"Color de fondo de la consola seleccionado: {color.name()}")  # Mensaje de depuración
             
             # Aplicar el color de fondo al messages_container
             self.messages_container.setStyleSheet(f"background-color: {color.name()};")
@@ -788,10 +792,10 @@ class MainApp(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     # Configura el icono global de la aplicación
-    app.setWindowIcon(QtGui.QIcon('.\\_internal\\ui\\imgs\\icon.ico'))  # Ruta al icono
+    app.setWindowIcon(QtGui.QIcon('.\\ui\\imgs\\icon.ico'))  # Ruta al icono
 
     window = MainApp()  # Crea la ventana principal
-    window.setWindowIcon(QtGui.QIcon('.\\_internal\\ui\\imgs\\icon.ico'))  # Configura el icono para la ventana
+    window.setWindowIcon(QtGui.QIcon('.\\ui\\imgs\\icon.ico'))  # Configura el icono para la ventana
     window.show()
 
     sys.exit(app.exec_())
