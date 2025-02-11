@@ -5,6 +5,7 @@ package.json
 prueba.py
 get-pip.py
 script.py
+test.py
 /Overlay
 /Config_page
 /audio_test
