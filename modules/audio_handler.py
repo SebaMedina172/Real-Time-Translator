@@ -21,6 +21,7 @@ import numpy as np
 import threading
 import time
 import asyncio
+import tempfile
 
 # Importamos el worker desde el módulo creado (workers.py)
 from worker import AudioProcessingWorker
@@ -54,12 +55,10 @@ silence_counter = 0
 lock = threading.Lock()
 
 def save_temp_audio(frames, file_suffix=""):
-    temp_dir = os.path.abspath('./temp')
-    os.makedirs(temp_dir, exist_ok=True)
-    timestamp = int(time.time())
-    temp_file_path = os.path.join(temp_dir, f"temp_audio_{timestamp}{file_suffix}.wav")
-
     try:
+        with tempfile.NamedTemporaryFile(suffix=f"{file_suffix}.wav", delete=False) as temp_file:
+            temp_file_path = temp_file.name
+
         logger.debug(f"Abriendo archivo WAV para escritura: {temp_file_path}")
         with wave.open(temp_file_path, 'wb') as wf:
             wf.setnchannels(1)
@@ -67,8 +66,10 @@ def save_temp_audio(frames, file_suffix=""):
             wf.setframerate(settings["RATE"])
             wf.writeframes(b''.join(frames))
             logger.debug(f"Archivo WAV guardado correctamente en: {temp_file_path}")
+
     except Exception as e:
         logger.debug(f"Error al guardar el archivo de audio: {e}")
+        return None
 
     return temp_file_path
 

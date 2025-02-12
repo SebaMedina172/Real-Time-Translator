@@ -32,9 +32,6 @@ class AudioProcessingWorker(QRunnable):
             self.signals.finished.emit(translated_text)
         except Exception as e:
             logger.debug(f"Error en el AudioProcessingWorker: {e}")
-        finally:
-            try:
-                os.remove(self.audio_file)
-            except Exception as e:
-                logger.debug(f"Error al eliminar el archivo temporal: {e}")
-            cleanup_memory()
+
+
+
