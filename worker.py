@@ -1,15 +1,15 @@
-# workers.py
 from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
 import asyncio
 import os
-from modules.speech_processing import process_audio, cleanup_memory  # Asegúrate de que las rutas sean correctas
+from modules.speech_processing import process_audio, cleanup_memory
 import logging
 from logging.handlers import RotatingFileHandler
+from modules.persistent_loop import get_event_loop  # Importamos nuestro event loop persistente
 
-# Configuración del logger
+# Configuración del logger (igual que antes)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-handler = RotatingFileHandler('app.log', maxBytes=5 * 1024 * 1024, backupCount=5)  # 5 MB por archivo, hasta 5 backups
+handler = RotatingFileHandler('app.log', maxBytes=5 * 1024 * 1024, backupCount=5)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -27,11 +27,14 @@ class AudioProcessingWorker(QRunnable):
 
     def run(self):
         try:
-            # Ejecutamos la función asíncrona usando asyncio.run, lo que crea y cierra un event loop
-            translated_text = asyncio.run(process_audio(self.audio_file, self.translator))
+            # Obtenemos el event loop persistente
+            loop = get_event_loop()
+            # Enviamos la tarea asíncrona al event loop y obtenemos un Future
+            future = asyncio.run_coroutine_threadsafe(
+                process_audio(self.audio_file, self.translator), loop
+            )
+            # Bloqueamos hasta que la tarea termine y obtenemos el resultado
+            translated_text = future.result()
             self.signals.finished.emit(translated_text)
         except Exception as e:
             logger.debug(f"Error en el AudioProcessingWorker: {e}")
-
-
-
