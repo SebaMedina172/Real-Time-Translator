@@ -114,7 +114,7 @@ async def transcribe_and_translate(audio_file):
             elif detected_language == "en":
                 translated = await translate_marian(sentence, tokenizer_en_es, model_en_es)
             else:
-                translated = sentence  # Para otros idiomas
+                return None
             
             # Ahora 'translated' siempre está definido
             if translated not in translated_sentences:
