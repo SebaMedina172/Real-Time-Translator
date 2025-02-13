@@ -74,20 +74,31 @@ async def transcribe_and_translate(audio_file):
     logger.debug(f'Archivo pasado al Transcribe: {audio_file}')
     audio_file_abs = os.path.abspath(audio_file)
     logger.debug(f"Ruta absoluta del archivo: {audio_file}")
+    
+    # Verificar permisos de lectura
     if not os.access(audio_file, os.R_OK):
         raise PermissionError(f"No se puede leer el archivo: {audio_file}")
+    
+    # Verificar que el archivo no esté vacío
+    file_size = os.path.getsize(audio_file_abs)
+    if file_size == 0:
+        logger.debug("El archivo de audio está vacío, se omite el procesamiento.")
+        return None
     
     try:
         
         logger.debug(f"Verificando existencia antes de transcribir: {os.path.exists(audio_file_abs)}")
         logger.debug(f"Permisos de lectura antes de transcribir: {os.access(audio_file_abs, os.R_OK)}")
+        
         # Realiza la transcripción con Whisper
         with torch.inference_mode():
             result = await asyncio.to_thread(model.transcribe, audio_file_abs)
         
         # Extrae el texto de la transcripción
-        text = result.get('text', None)
+        text = result.get('text', '')
+        text = text.strip()  # Elimina espacios en blanco al inicio y final
         logger.debug(f"Texto transcripto: {text}")
+
         # Limpieza de memoria al finalizar la transcripcion
         cleanup_memory()
         
@@ -108,6 +119,10 @@ async def transcribe_and_translate(audio_file):
         # Dividir el texto en partes más pequeñas basadas en las pausas naturales
         translated_sentences = []
         for sentence in sentences:
+            # si sentence.strip() es vacío, omitir
+            if not sentence:
+                continue
+
             # Definir 'translated' en todos los casos
             if detected_language == "es":
                 translated = await translate_marian(sentence, tokenizer_es_en, model_es_en)
@@ -122,6 +137,7 @@ async def transcribe_and_translate(audio_file):
         
         translated_text = " ".join(translated_sentences)
         logger.debug(f"Texto final traducido: {translated_text}")
+
         # Limpieza de memoria tras la traducción
         cleanup_memory()
         return translated_text
