@@ -73,11 +73,11 @@ async def translate_marian(text, tokenizer, model):
 async def transcribe_and_translate(audio_file):
     logger.debug(f'Archivo pasado al Transcribe: {audio_file}')
     audio_file_abs = os.path.abspath(audio_file)
-    logger.debug(f"Ruta absoluta del archivo: {audio_file}")
+    logger.debug(f"Ruta absoluta del archivo: {audio_file_abs}")
     
     # Verificar permisos de lectura
-    if not os.access(audio_file, os.R_OK):
-        raise PermissionError(f"No se puede leer el archivo: {audio_file}")
+    if not os.access(audio_file_abs, os.R_OK):
+        raise PermissionError(f"No se puede leer el archivo: {audio_file_abs}")
     
     # Verificar que el archivo no esté vacío
     file_size = os.path.getsize(audio_file_abs)
@@ -94,20 +94,23 @@ async def transcribe_and_translate(audio_file):
         with torch.inference_mode():
             result = await asyncio.to_thread(model.transcribe, audio_file_abs)
         
-        # Extrae el texto de la transcripción
-        text = result.get('text', '')
-        text = text.strip()  # Elimina espacios en blanco al inicio y final
+        # Extrae y limpia el texto de la transcripción
+        text = result.get('text', '').strip()
         logger.debug(f"Texto transcripto: {text}")
 
         # Limpieza de memoria al finalizar la transcripcion
         cleanup_memory()
         
+        # Verificar que el texto obtenido no esté vacío
         if not text:
             logger.debug("La transcripción está vacía.")
             return None
         
         # Detecta el idioma de la transcripción
-        detected_language = result['language']
+        detected_language = result.get('language')
+        if not detected_language:
+            logger.debug("No se detectó idioma en la transcripción.")
+            return None
         logger.debug(f"Idioma detectado: {detected_language}")
 
         # Segmentación con PySBD
@@ -115,23 +118,28 @@ async def transcribe_and_translate(audio_file):
         segmenter = SEGMENTERS[lang_code]
         sentences = segmenter.segment(text)
         sentences = [s.strip() for s in sentences if s.strip()]
+
+        if not sentences:
+            logger.debug("No se obtuvieron oraciones después de la segmentación.")
+            return None
         
-        # Dividir el texto en partes más pequeñas basadas en las pausas naturales
+        # Traducir cada oración
         translated_sentences = []
         for sentence in sentences:
-            # si sentence.strip() es vacío, omitir
             if not sentence:
-                continue
-
-            # Definir 'translated' en todos los casos
-            if detected_language == "es":
-                translated = await translate_marian(sentence, tokenizer_es_en, model_es_en)
-            elif detected_language == "en":
-                translated = await translate_marian(sentence, tokenizer_en_es, model_en_es)
-            else:
-                return None
+                continue  # Omitir oraciones vacías
+            try:
+                if detected_language == "es":
+                    translated = await translate_marian(sentence, tokenizer_es_en, model_es_en)
+                elif detected_language == "en":
+                    translated = await translate_marian(sentence, tokenizer_en_es, model_en_es)
+                else:
+                    logger.debug(f"Idioma {detected_language} no soportado para traducción.")
+                    continue
+            except Exception as trans_e:
+                logger.error(f"Error al traducir la oración '{sentence}': {trans_e}")
+                continue  # Salta esta oración y continúa con la siguiente
             
-            # Ahora 'translated' siempre está definido
             if translated not in translated_sentences:
                 translated_sentences.append(translated)
         
@@ -140,10 +148,11 @@ async def transcribe_and_translate(audio_file):
 
         # Limpieza de memoria tras la traducción
         cleanup_memory()
-        return translated_text
+        return translated_text if translated_text else None
     
     except FileNotFoundError as e:
         logger.debug(f"FileNotFoundError: {e}")
+        return None
     except Exception as e:
         logger.debug(f"Error al transcribir o traducir: {e}")
         return None

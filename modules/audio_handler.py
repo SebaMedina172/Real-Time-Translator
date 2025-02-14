@@ -24,7 +24,7 @@ import asyncio
 import tempfile
 
 # Importamos el worker desde el módulo creado (workers.py)
-from worker import AudioProcessingWorker
+from modules.worker import AudioProcessingWorker
 
 # Importamos el buffer circular
 from modules.circular_buffer import CircularBuffer
