@@ -376,6 +376,7 @@ class MainApp(QtWidgets.QMainWindow):
                 self.findChild(QtWidgets.QPushButton, "color_msg_btn").setStyleSheet(f"color: {config.get('color_msg', '#000000')};")
                 self.findChild(QtWidgets.QDoubleSpinBox, "opacity_bg_console").setValue(config.get("opacity_bg_console", 1.0))
                 self.findChild(QtWidgets.QPushButton, "bg_color_console").setStyleSheet(f"background-color: {config.get('bg_color_console', '#464d5f')};")
+                self.findChild(QtWidgets.QLineEdit, "name_input").setText(config.get("user_name", ""))
 
                 # Aplicar color de fondo y opacidad al messages_container
                 self.apply_consola_style(config)
@@ -405,9 +406,12 @@ class MainApp(QtWidgets.QMainWindow):
 
         # Guardar configuración de estilos de texto
         self.save_style_config()  # Esta es la función que ya tienes para guardar estilos
-
         # Guardar configuración de audio
         self.save_audio_config()  # Esta es la función que implementaste para guardar audio
+
+        # Llamar a las funciones de carga para aplicar los cambios inmediatamente
+        self.load_style_config()
+        self.load_audio_config()
 
         self.sys_msg("config","Configuracion guardada exitosamente")
     
@@ -448,11 +452,9 @@ class MainApp(QtWidgets.QMainWindow):
             "font_size": self.findChild(QtWidgets.QSpinBox, "size_msg_spin").value(),
             "font_type": self.font_type,
             "color_msg": self.extract_color(self.findChild(QtWidgets.QPushButton, "color_msg_btn").styleSheet()),  # Obtener el color del texto
-            "stroke_border": self.findChild(QtWidgets.QSpinBox, "stroke_border_msg").value(),
-            "color_border_msg": self.extract_color(self.findChild(QtWidgets.QPushButton, "color_border_msg").styleSheet()),  # Obtener el color del borde
-            "color_bg_msg": self.extract_color(self.findChild(QtWidgets.QPushButton, "color_bg_msg").styleSheet()),  # Obtener el color de fondo
             "opacity_bg_console": self.findChild(QtWidgets.QDoubleSpinBox, "opacity_bg_console").value(),
             "color_bg_console": self.extract_color(self.findChild(QtWidgets.QPushButton, "bg_color_console").styleSheet()),  # Obtener el color de fondo de la consola
+            "user_name": self.findChild(QtWidgets.QLineEdit, "name_input").text()
         }
         with open(self.config_style_file, 'w') as f:
             json.dump(config, f, indent=4)  # Usar indent=4 para mejorar la legibilidad
@@ -581,19 +583,6 @@ class MainApp(QtWidgets.QMainWindow):
         if color.isValid():
             # Aplicar el color al botón y a las etiquetas
             self.findChild(QtWidgets.QPushButton, "color_msg_btn").setStyleSheet(f"color: {color.name()};")
-            logger.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
-
-    def update_border_thickness(self):
-        """Actualiza el grosor del borde basado en el input del usuario."""
-        thickness = self.findChild(QtWidgets.QSpinBox, "stroke_border_msg").value()
-        logger.debug(f"Grosor del borde actualizado a: {thickness}")  # Mensaje de depuración
-
-    def select_border_color_msg(self):
-        """Selecciona el color del texto."""
-        color = QColorDialog.getColor()
-        if color.isValid():
-            # Aplicar el color al botón y a las etiquetas
-            self.findChild(QtWidgets.QPushButton, "color_border_msg").setStyleSheet(f"color: {color.name()};")
             logger.debug(f"Color de texto seleccionado: {color.name()}")  # Mensaje de depuración
 
     def select_background_color_msg(self):
