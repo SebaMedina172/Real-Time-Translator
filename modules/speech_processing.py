@@ -21,6 +21,7 @@ import config.configuracion as cfg
 from config.configuracion import settings, load_settings
 import asyncio
 import torch
+import postprocessor
 
 load_settings()
 
@@ -47,6 +48,22 @@ else:
     # Ruta durante el desarrollo
     base_path = os.path.dirname(__file__)
 
+#Evaluar si utilizar postprocesado
+def should_postprocess(text: str, context: str) -> bool:
+    logger.debug(f"[should_postprocess] Longitud del texto: {len(text)}; Contexto: '{context}'")
+    if len(text) < 30:
+        logger.debug("[should_postprocess] Texto demasiado corto, no se activa postprocesado")
+        return False
+    if not context.strip():
+        logger.debug("[should_postprocess] Contexto vacío, no se activa postprocesado")
+        return False
+    pronouns = [' he ', ' she ', ' it ', ' they ', ' él ', ' ella ', ' eso ', ' ellos ', ' ellas ']
+    if any(pronoun in text.lower() for pronoun in pronouns):
+        logger.debug("[should_postprocess] Se detectaron pronombres ambiguos, se activa postprocesado")
+        return True
+    logger.debug("[should_postprocess] Criterio no cumplido, no se activa postprocesado")
+    return False
+
 def cleanup_memory():
     """Limpieza optimizada sin spaCy"""
     import gc, torch
@@ -58,7 +75,6 @@ def cleanup_memory():
 async def transcribe_and_translate_limited(audio_file):
     async with semaphore:
         return await transcribe_and_translate(audio_file)
-
 
 async def translate_marian(text, tokenizer, model):
     try:
@@ -157,13 +173,25 @@ async def transcribe_and_translate(audio_file):
         logger.debug(f"Error al transcribir o traducir: {e}")
         return None
 
-async def process_audio(audio_file, translator):
+async def process_audio(audio_file, ui_object):
     try:
         translated_text = await transcribe_and_translate_limited(audio_file)
-        if translated_text:  # Solo actualiza si hay texto traducido
+        if translated_text:
             cfg.translated_text = translated_text
             logger.debug(f"Texto traducido del process: {cfg.translated_text}")
-            translator.update_translated_text()
+            # Emite la señal para agregar el mensaje en la interfaz
+            ui_object.new_message_signal.emit(cfg.translated_text)
+            # Puedes esperar un breve momento para asegurarte de que el mensaje se agregue
+            await asyncio.sleep(0.1)
+            # Obtén el contexto (por ejemplo, los últimos 2 mensajes)
+            context = ui_object.get_context()
+            if should_postprocess(cfg.translated_text, context):
+                logger.debug("Se activa el postprocesado automáticamente.")
+                # Supongamos que el último mensaje agregado tiene el ID almacenado en ui_object.last_msg_id
+                msg_id = ui_object.last_msg_id
+                await postprocessor.process_postediting(msg_id, cfg.translated_text, context, ui_object)
+            else:
+                logger.debug("No se activa el postprocesado (criterio no cumplido).")
         else:
             logger.debug("No se actualiza el texto traducido porque está vacío.")
     except Exception as e:
@@ -173,7 +201,6 @@ async def process_audio(audio_file, translator):
             os.remove(audio_file)
         except Exception as e:
             logger.debug(f"Error al eliminar archivo: {e}")
-        # Limpieza de memoria al finalizar el proceso
         cleanup_memory()
 
 

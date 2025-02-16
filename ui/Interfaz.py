@@ -27,6 +27,7 @@ from config.configuracion import settings, load_settings, calcular_valores_dinam
 from modules.audio_handler import record_audio, stop_recording
 from modules.speech_processing import process_audio
 import threading
+from bs4 import BeautifulSoup
 
 class Translator(QObject):
     text_changed = pyqtSignal(str)
@@ -50,6 +51,8 @@ class AudioRecordingThread(QThread):
         record_audio(self.translator, self.app_instance,self.mic_index)
 
 class MainApp(QtWidgets.QMainWindow):
+    new_message_signal = pyqtSignal(str)           # Emite el texto del nuevo mensaje
+    update_message_signal = pyqtSignal(str, str)     # (refined_text, msg_id)
     def __init__(self):
         super(MainApp, self).__init__()
         # Carga el archivo .ui
@@ -69,6 +72,15 @@ class MainApp(QtWidgets.QMainWindow):
 
         #Setear limite de mensajes
         self.Consola.document().setMaximumBlockCount(30)
+
+        self.Consola.setAcceptRichText(True)
+
+        self.message_list = []  # Lista de diccionarios: {'id': <id>, 'html': <html_message>}
+        self.message_counter = 0  # Contador para generar IDs únicos
+
+        # Conectar la señal para que las actualizaciones se hagan en el hilo principal
+        self.new_message_signal.connect(self.handle_new_message)
+        self.update_message_signal.connect(self.update_text_edit)
 ######################################################################################################################
         # Conectar señales de los campos de entrada de los estilos del texto a funciones
         self.findChild(QtWidgets.QComboBox, "style_msg_box").currentTextChanged.connect(self.update_text_style)
@@ -247,7 +259,7 @@ class MainApp(QtWidgets.QMainWindow):
                 calcular_valores_dinamicos()
 
                 # Intentar iniciar la grabación con el micrófono seleccionado
-                self.recording_thread = AudioRecordingThread(self.translator, self, mic_index)
+                self.recording_thread = AudioRecordingThread(self, self, mic_index)
                 self.recording_thread.start()
 
                 # Actualizar la interfaz
@@ -317,33 +329,52 @@ class MainApp(QtWidgets.QMainWindow):
 
 ###########################################################################################################
 
-    #Actualizar mensajes
-    def update_text_edit(self, new_text):
-        if not new_text:
-            return
+    def generate_new_message_id(self):
+        self.message_counter += 1
+        return f"msg_{self.message_counter}"
+    
+    def handle_new_message(self, new_text: str):
+        """Slot para agregar un mensaje nuevo a la interfaz."""
+        msg_id = self.generate_new_message_id()
+        styled_text = self.format_message(new_text, msg_id)
+        self.message_list.append({'id': msg_id, 'html': styled_text})
+        self.render_messages()
+        # Puedes almacenar el último msg_id si lo necesitas para postprocesar:
+        self.last_msg_id = msg_id
 
-        logger.debug(f"Actualizando texto: {new_text}")
+    def add_message(self, new_text: str) -> str:
+        """
+        Inserta un mensaje nuevo en la interfaz y retorna el ID asignado.
+        """
+        msg_id = self.generate_new_message_id()
+        self.update_text_edit(new_text, msg_id)
+        return msg_id
+    
+    def strip_html(self, html: str) -> str:
+        soup = BeautifulSoup(html, 'html.parser')
+        return soup.get_text()
 
-        # Comprobar si el checkbox está marcado para incluir el nombre
+    def get_context(self) -> str:
+        context_texts = []
+        for message in self.message_list[-2:]:
+            plain_text = self.strip_html(message['html'])
+            context_texts.append(plain_text)
+        return " ".join(context_texts)
+
+    def format_message(self, new_text: str, msg_id: str) -> str:
+        # Aplicar el formateo de HTML como lo hacías
         include_name_checkbox = self.findChild(QtWidgets.QCheckBox, "include_name_checkbox")
         if include_name_checkbox and include_name_checkbox.isChecked():
             name_lineedit = self.findChild(QtWidgets.QLineEdit, "name_input")
-            # Obtener el texto del QLineEdit
             name = name_lineedit.text().strip() if name_lineedit else ""
             if name:
-                # Prependemos el nombre en negrita seguido de dos puntos al mensaje
                 new_text = f"<b>{name}:</b> {new_text}"
-
-        # Obtener los valores de configuración
         font_style = self.findChild(QtWidgets.QComboBox, "style_msg_box").currentText()
         font_size = self.findChild(QtWidgets.QSpinBox, "size_msg_spin").value()
-        # Suponemos que el botón que define el color tiene un stylesheet del tipo "color: #000000;"
         text_color = self.findChild(QtWidgets.QPushButton, "color_msg_btn").styleSheet().split(":")[-1].strip()
         font_type = self.findChild(QtWidgets.QComboBox, "type_font_msg").currentText()
-
-        # Crear el texto con formato HTML
         styled_text = f"""
-            <div style="
+            <div data-msg-id="{msg_id}" style="
                 background-color: transparent;
                 font-weight: {font_type};
                 border-radius: 5px;
@@ -355,23 +386,35 @@ class MainApp(QtWidgets.QMainWindow):
                 {new_text}
             </div>
         """
+        return styled_text
+
+    #Actualizar mensajes
+    def update_text_edit(self, new_text, msg_id=None):
+        if not new_text:
+            return
+        # Si msg_id se pasa, se actualiza el mensaje en el buffer
+        if msg_id is None:
+            msg_id = self.generate_new_message_id()
+        
+        # Aplica el formateo (siempre construyendo un HTML a partir del texto refinado)
+        styled_text = self.format_message(new_text, msg_id)
         
         updated = False
-        for message in self.message_list:
+        for i, message in enumerate(self.message_list):
             if message['id'] == msg_id:
-                message['html'] = styled_text
+                self.message_list[i]['html'] = styled_text
                 updated = True
                 break
         if not updated:
             self.message_list.append({'id': msg_id, 'html': styled_text})
-
+        
         self.render_messages()
 
     def render_messages(self):
         self.Consola.clear()
         for message in self.message_list:
             self.Consola.insertHtml(message['html'])
-            self.Consola.append("")  # Separador
+            self.Consola.append("")
         self.Consola.verticalScrollBar().setValue(self.Consola.verticalScrollBar().maximum())
     
 #####################################################################################################
