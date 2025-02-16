@@ -355,11 +355,23 @@ class MainApp(QtWidgets.QMainWindow):
                 {new_text}
             </div>
         """
+        
+        updated = False
+        for message in self.message_list:
+            if message['id'] == msg_id:
+                message['html'] = styled_text
+                updated = True
+                break
+        if not updated:
+            self.message_list.append({'id': msg_id, 'html': styled_text})
 
-        # Insertar el mensaje formateado en el QTextEdit
-        self.Consola.insertHtml(styled_text)
-        self.Consola.append("")  # Agrega una línea vacía para separar los mensajes
-        # Desplaza automáticamente al final
+        self.render_messages()
+
+    def render_messages(self):
+        self.Consola.clear()
+        for message in self.message_list:
+            self.Consola.insertHtml(message['html'])
+            self.Consola.append("")  # Separador
         self.Consola.verticalScrollBar().setValue(self.Consola.verticalScrollBar().maximum())
     
 #####################################################################################################

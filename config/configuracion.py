@@ -6,8 +6,8 @@ translated_text = "Texto Default"
 recording_active = False  # Inicializa en False
 
 # Modelos Traduccion: MarianMT
-MARIAN_MODEL_ES = "Helsinki-NLP/opus-mt-es-en"  # Modelo spaCy para segmentación de oraciones en español
-MARIAN_MODEL_EN = "Helsinki-NLP/opus-mt-en-es"  # Modelo spaCy para segmentación de oraciones en ingles
+MARIAN_MODEL_ES = "Helsinki-NLP/opus-mt-es-en" 
+MARIAN_MODEL_EN = "Helsinki-NLP/opus-mt-en-es"  
 
 # Obtener la ruta absoluta del archivo JSON
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
