@@ -91,6 +91,7 @@ class MainApp(QtWidgets.QMainWindow):
         self.findChild(QtWidgets.QPushButton, "bg_color_console").clicked.connect(self.select_bg_color_console)
 
         # Conectar señales de los campos de entrada de audio a funciones
+        self.findChild(QtWidgets.QComboBox, "trans_direction").currentTextChanged.connect(self.update_translation_direction)
         self.findChild(QtWidgets.QSpinBox, "rate").valueChanged.connect(self.update_rate)
         self.findChild(QtWidgets.QSpinBox, "chunk_duration").valueChanged.connect(self.update_chunk_duration)
         self.findChild(QtWidgets.QDoubleSpinBox, "voice_window").valueChanged.connect(self.update_voice_window)
@@ -452,6 +453,7 @@ class MainApp(QtWidgets.QMainWindow):
                 self.findChild(QtWidgets.QLineEdit, "temp_dir").setText(audio_config.get("TEMP_DIR", './temp'))
                 self.findChild(QtWidgets.QSpinBox, "threshold").setValue(audio_config.get("THRESHOLD", 500))
                 self.findChild(QtWidgets.QComboBox, "whisper_model").setCurrentText(audio_config.get("WHISPER_MODEL", "tiny"))
+                self.findChild(QtWidgets.QComboBox, "trans_direction").setCurrentText(audio_config.get("TRANS_DIRECTION", "tiny"))
 
 #####################################################################################################
     #Guardar ambas configuraciones
@@ -488,6 +490,7 @@ class MainApp(QtWidgets.QMainWindow):
             "THRESHOLD": self.findChild(QtWidgets.QSpinBox, "threshold").value(),
             "WHISPER_MODEL": self.whisper_model,
             "BUFFER_SIZE": self.findChild(QtWidgets.QSpinBox, "buffer_size").value(),
+            "TRANS_DIRECTION": self.findChild(QtWidgets.QComboBox, "trans_direction").currentText(),
         }
 
         # Guardar en el archivo JSON
@@ -615,6 +618,10 @@ class MainApp(QtWidgets.QMainWindow):
         buffer_size = self.findChild(QtWidgets.QSpinBox, "buffer_size").value()
         logger.debug(f"Tamaño de buffer actualizado a: {buffer_size}")  # Mensaje de depuración
 
+    def update_translation_direction(self):
+        """Actualiza la direccion de la traduccion"""
+        self.current_font_family = self.findChild(QtWidgets.QComboBox, "trans_direction").currentText()
+        logger.debug(f"Direccion de traduccion cambiada a: {self.current_font_family}")
 ##################################################################################################################
     #Funciones para tomar correctamente los valores de los inputs de estilos de texto
     def update_text_style(self):

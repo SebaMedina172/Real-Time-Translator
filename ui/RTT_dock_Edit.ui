@@ -143,7 +143,7 @@ QPushButton:hover{
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>imgs/left_arrow_white.svg</normaloff>imgs/left_arrow_white.svg</iconset>
+                 <normaloff>../../../../../.designer/backup/imgs/left_arrow_white.svg</normaloff>../../../../../.designer/backup/imgs/left_arrow_white.svg</iconset>
                </property>
               </widget>
              </item>
@@ -154,7 +154,7 @@ QPushButton:hover{
                </property>
                <property name="icon">
                 <iconset>
-                 <normaloff>imgs/rigt_arrow_white.svg</normaloff>imgs/rigt_arrow_white.svg</iconset>
+                 <normaloff>../../../../../.designer/backup/imgs/rigt_arrow_white.svg</normaloff>../../../../../.designer/backup/imgs/rigt_arrow_white.svg</iconset>
                </property>
               </widget>
              </item>
@@ -361,20 +361,20 @@ QLabel{
 }</string>
                </property>
                <property name="currentIndex">
-                <number>2</number>
+                <number>1</number>
                </property>
                <widget class="QWidget" name="Instrucciones">
                 <property name="geometry">
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>98</width>
-                  <height>91</height>
+                  <width>349</width>
+                  <height>370</height>
                  </rect>
                 </property>
                 <attribute name="icon">
                  <iconset>
-                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                  <normaloff>../../../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../../../.designer/backup/imgs/toolbox.svg</iconset>
                 </attribute>
                 <attribute name="label">
                  <string>Instrucciones</string>
@@ -428,8 +428,8 @@ p, li { white-space: pre-wrap; }
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>264</width>
-                  <height>544</height>
+                  <width>332</width>
+                  <height>588</height>
                  </rect>
                 </property>
                 <property name="minimumSize">
@@ -440,7 +440,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <attribute name="icon">
                  <iconset>
-                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                  <normaloff>../../../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../../../.designer/backup/imgs/toolbox.svg</iconset>
                 </attribute>
                 <attribute name="label">
                  <string>Configuracion de Traduccion</string>
@@ -480,78 +480,119 @@ p, li { white-space: pre-wrap; }
                    <property name="frameShadow">
                     <enum>QFrame::Raised</enum>
                    </property>
-                   <layout class="QVBoxLayout" name="verticalLayout_8" stretch="1,0,1,1,1,1,1,0,1,1,1,0">
+                   <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,0,1,1,1,1,1,0,1,0,0,0">
                     <item>
-                     <widget class="QFrame" name="frame_9">
+                     <widget class="QFrame" name="frame_25">
                       <property name="frameShape">
                        <enum>QFrame::StyledPanel</enum>
                       </property>
                       <property name="frameShadow">
                        <enum>QFrame::Raised</enum>
                       </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_19" stretch="2,1">
                        <item>
-                        <widget class="QLabel" name="label">
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                           <horstretch>0</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
+                        <widget class="QLabel" name="label_17">
                          <property name="toolTip">
-                          <string>Cantidad de muestras de audio por segundo para el procesamiento</string>
+                          <string>Selecciona el dispositivo de entrada de audio</string>
                          </property>
                          <property name="text">
-                          <string>Frecuencia de muestreo (Hz):</string>
+                          <string>Microfono:</string>
                          </property>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QSpinBox" name="rate">
-                         <property name="buttonSymbols">
-                          <enum>QAbstractSpinBox::NoButtons</enum>
+                        <widget class="QComboBox" name="microphoneComboBox"/>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_13">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_7">
+                         <property name="toolTip">
+                          <string>Modelo utilizado para traducir el audio en tiempo real</string>
                          </property>
-                         <property name="maximum">
-                          <number>100000</number>
+                         <property name="text">
+                          <string>Modelo de traduccion:</string>
                          </property>
-                         <property name="value">
-                          <number>16000</number>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="whisper_model">
+                         <property name="frame">
+                          <bool>true</bool>
                          </property>
+                         <item>
+                          <property name="text">
+                           <string>Tiny</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Base</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Small</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Medium</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Large</string>
+                          </property>
+                         </item>
                         </widget>
                        </item>
                       </layout>
                      </widget>
                     </item>
                     <item>
-                     <widget class="QFrame" name="frame_8">
+                     <widget class="QFrame" name="frame_2">
                       <property name="frameShape">
                        <enum>QFrame::StyledPanel</enum>
                       </property>
                       <property name="frameShadow">
                        <enum>QFrame::Raised</enum>
                       </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="2,1">
                        <item>
-                        <widget class="QLabel" name="label_3">
-                         <property name="toolTip">
-                          <string>Duración de los fragmentos de audio analizados en cada ciclo</string>
-                         </property>
+                        <widget class="QLabel" name="label_2">
                          <property name="text">
-                          <string>Segmento de audio (ms):</string>
+                          <string>Direccion de la traduccion:</string>
                          </property>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QSpinBox" name="chunk_duration">
-                         <property name="buttonSymbols">
-                          <enum>QAbstractSpinBox::NoButtons</enum>
-                         </property>
-                         <property name="maximum">
-                          <number>100</number>
-                         </property>
-                         <property name="value">
-                          <number>30</number>
-                         </property>
+                        <widget class="QComboBox" name="trans_direction">
+                         <item>
+                          <property name="text">
+                           <string>Automatico</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>En -&gt; Spa</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Spa -&gt; En</string>
+                          </property>
+                         </item>
                         </widget>
                        </item>
                       </layout>
@@ -801,31 +842,6 @@ p, li { white-space: pre-wrap; }
                      </widget>
                     </item>
                     <item>
-                     <widget class="QFrame" name="frame_25">
-                      <property name="frameShape">
-                       <enum>QFrame::StyledPanel</enum>
-                      </property>
-                      <property name="frameShadow">
-                       <enum>QFrame::Raised</enum>
-                      </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_19" stretch="2,1">
-                       <item>
-                        <widget class="QLabel" name="label_17">
-                         <property name="toolTip">
-                          <string>Selecciona el dispositivo de entrada de audio</string>
-                         </property>
-                         <property name="text">
-                          <string>Microfono:</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QComboBox" name="microphoneComboBox"/>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
                      <widget class="QFrame" name="frame_15">
                       <property name="frameShape">
                        <enum>QFrame::StyledPanel</enum>
@@ -852,60 +868,6 @@ p, li { white-space: pre-wrap; }
                          <property name="placeholderText">
                           <string>Hola</string>
                          </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QFrame" name="frame_13">
-                      <property name="frameShape">
-                       <enum>QFrame::StyledPanel</enum>
-                      </property>
-                      <property name="frameShadow">
-                       <enum>QFrame::Raised</enum>
-                      </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="2,1">
-                       <item>
-                        <widget class="QLabel" name="label_7">
-                         <property name="toolTip">
-                          <string>Modelo utilizado para traducir el audio en tiempo real</string>
-                         </property>
-                         <property name="text">
-                          <string>Modelo de traduccion:</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QComboBox" name="whisper_model">
-                         <property name="frame">
-                          <bool>true</bool>
-                         </property>
-                         <item>
-                          <property name="text">
-                           <string>Tiny</string>
-                          </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Base</string>
-                          </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Small</string>
-                          </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Medium</string>
-                          </property>
-                         </item>
-                         <item>
-                          <property name="text">
-                           <string>Large</string>
-                          </property>
-                         </item>
                         </widget>
                        </item>
                       </layout>
@@ -943,6 +905,82 @@ p, li { white-space: pre-wrap; }
                       </layout>
                      </widget>
                     </item>
+                    <item>
+                     <widget class="QFrame" name="frame_8">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label_3">
+                         <property name="toolTip">
+                          <string>Duración de los fragmentos de audio analizados en cada ciclo</string>
+                         </property>
+                         <property name="text">
+                          <string>Segmento de audio (ms):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="chunk_duration">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="maximum">
+                          <number>100</number>
+                         </property>
+                         <property name="value">
+                          <number>30</number>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QFrame" name="frame_9">
+                      <property name="frameShape">
+                       <enum>QFrame::StyledPanel</enum>
+                      </property>
+                      <property name="frameShadow">
+                       <enum>QFrame::Raised</enum>
+                      </property>
+                      <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="2,1">
+                       <item>
+                        <widget class="QLabel" name="label">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="toolTip">
+                          <string>Cantidad de muestras de audio por segundo para el procesamiento</string>
+                         </property>
+                         <property name="text">
+                          <string>Frecuencia de muestreo (Hz):</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="rate">
+                         <property name="buttonSymbols">
+                          <enum>QAbstractSpinBox::NoButtons</enum>
+                         </property>
+                         <property name="maximum">
+                          <number>100000</number>
+                         </property>
+                         <property name="value">
+                          <number>16000</number>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
                    </layout>
                   </widget>
                  </item>
@@ -959,7 +997,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                 <attribute name="icon">
                  <iconset>
-                  <normaloff>../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../.designer/backup/imgs/toolbox.svg</iconset>
+                  <normaloff>../../../../../../../.designer/backup/imgs/toolbox.svg</normaloff>../../../../../../../.designer/backup/imgs/toolbox.svg</iconset>
                 </attribute>
                 <attribute name="label">
                  <string>Configuracion Texto</string>
