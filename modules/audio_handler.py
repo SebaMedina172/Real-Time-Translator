@@ -35,6 +35,9 @@ from PyQt5.QtCore import QThreadPool
 import config.configuracion as cfg
 from config.configuracion import settings, load_settings, calcular_valores_dinamicos
 
+# Variable global adicional para almacenar el índice del último frame con voz
+last_voice_index = 0
+
 # Cargar la configuración
 load_settings()
 calcular_valores_dinamicos()
@@ -73,12 +76,15 @@ def save_temp_audio(frames, file_suffix=""):
 
     return temp_file_path
 
-def is_valid_audio(audio_data, min_size=1024, min_energy=1000):
-    # Verifica tamaño (en bytes) y energía promedio
-    if len(audio_data) < min_size:
+def is_valid_audio(audio_data, min_size=256, min_energy=100):
+    """
+    Verifica que el segmento de audio tenga al menos `min_size` bytes y una energía promedio superior a `min_energy`.
+    Se calculan sobre el total de bytes concatenados de todos los frames.
+    """
+    audio_bytes = b''.join(audio_data)
+    if len(audio_bytes) < min_size:
         return False
-    # Puedes convertir a numpy array y calcular la energía
-    audio_array = np.frombuffer(b''.join(audio_data), dtype=np.int16)
+    audio_array = np.frombuffer(audio_bytes, dtype=np.int16)
     if np.abs(audio_array).mean() < min_energy:
         return False
     return True
@@ -88,42 +94,46 @@ def is_loud_enough(frame, threshold=settings["THRESHOLD"]):
     avg_volume = np.abs(audio_data).mean()
     return avg_volume > threshold
 
-def process_audio_segment(translator, app_instance, threadpool, pre_roll_duration=0.0):
+def process_audio_segment(translator, app_instance, threadpool, pre_roll_duration=0.0, data_to_process=None):
     """
     Procesa el segmento de audio actual y, opcionalmente, reinserta un pre-roll para mantener contexto.
-    :param translator: Objeto que se encarga de traducir.
-    :param app_instance: Instancia de la UI para actualizar el texto.
-    :param threadpool: QThreadPool para ejecutar el worker.
-    :param pre_roll_duration: Duración en segundos del solapamiento a reinsertar.
-                              Si es 0.0, no se aplica pre-roll.
+    Ahora se puede pasar directamente el segmento a procesar (data_to_process) para que no incluya
+    frames de silencio al final.
     """
-    # Determina el número de frames a procesar según CUT_TIME
-    cut_index = int(settings["CUT_TIME"] * settings["RATE"] / cfg.CHUNK)
-    current_data = audio_buffer.get_data()
-    if len(current_data) < cut_index:
-        cut_index = len(current_data)
-    temp_audio = current_data[-cut_index:]
-    
+    if data_to_process is None:
+        data_to_process = audio_buffer.get_data()
+
+    if not is_valid_audio(data_to_process):
+        logger.debug("Segmento de audio inválido; se descarta y limpia el buffer.")
+        audio_buffer.clear()
+        return
+
+    # En este caso usamos el segmento completo que se pasó (ya recortado hasta el último frame con voz)
+    temp_audio = data_to_process
+
     temp_file = save_temp_audio(temp_audio)
     if temp_file:
         worker = AudioProcessingWorker(temp_file, translator)
         worker.signals.finished.connect(app_instance.update_text_edit)
         threadpool.start(worker)
-    
-    # Si se desea aplicar pre-roll, se extraen los últimos frames del pre_roll_duration
+
+    # Manejo del pre-roll (si corresponde)
     if pre_roll_duration > 0.0:
         overlap_frames = int(pre_roll_duration * settings["RATE"] / cfg.CHUNK)
-        pre_roll = current_data[-overlap_frames:] if len(current_data) >= overlap_frames else current_data[:]
+        if len(data_to_process) > overlap_frames:
+            pre_roll = data_to_process[-overlap_frames:]
+        else:
+            pre_roll = []
     else:
         pre_roll = []
-    
-    # Limpiar el buffer y, si corresponde, reinsertar el pre-roll
+
+    # Limpiar el buffer y reinsertar el pre-roll si aplica
     audio_buffer.clear()
     for frame in pre_roll:
         audio_buffer.append(frame)
 
 def record_audio(translator, app_instance, mic_index):
-    global audio_buffer, is_speaking, silence_counter, stream
+    global audio_buffer, is_speaking, silence_counter, stream, last_voice_index
 
     # Reiniciar el flujo de audio
     stream.stop_stream()
@@ -143,7 +153,9 @@ def record_audio(translator, app_instance, mic_index):
 
     logger.debug("Iniciando grabación...")
     start_time = time.time()
-    
+    last_logged_duration = 0  # Para controlar la frecuencia de logs
+    last_voice_index = 0      # Inicializa el índice del último frame con voz
+
     # Configurar el QThreadPool global (máximo 3 hilos concurrentes)
     threadpool = QThreadPool.globalInstance()
     threadpool.setMaxThreadCount(3)
@@ -151,7 +163,7 @@ def record_audio(translator, app_instance, mic_index):
     while cfg.recording_active:
         frame = stream.read(cfg.CHUNK, exception_on_overflow=False)
         try:
-            # Verificar si el frame contiene voz (usando VAD o umbral de volumen)
+            # Determina si el frame contiene voz (usando VAD o umbral de volumen)
             is_voice = vad.is_speech(frame, settings["RATE"]) or is_loud_enough(frame)
         except Exception as e:
             logger.debug(f"Error en VAD: {e}")
@@ -161,32 +173,42 @@ def record_audio(translator, app_instance, mic_index):
             silence_counter = 0
             audio_buffer.append(frame)
             is_speaking = True
+            # Actualiza el índice del último frame que contiene voz
+            last_voice_index = len(audio_buffer.get_data()) - 1
 
-            # Si se supera el tiempo máximo continuo sin pausa natural,
-            # se realiza un corte forzado con pre-roll para conservar contexto.
             if time.time() - start_time > settings["MAX_CONTINUOUS_SPEECH_TIME"]:
-                process_audio_segment(translator, app_instance, threadpool, pre_roll_duration=1.0)
-                is_speaking = False
-                start_time = time.time()
-
+                duration_sec = (len(audio_buffer.get_data()) * cfg.CHUNK) / settings["RATE"]
+                if duration_sec < 1.0:
+                    if duration_sec - last_logged_duration >= 0.5:
+                        logger.debug(f"Duración acumulada muy corta ({duration_sec:.2f}s), se espera a acumular más audio.")
+                        last_logged_duration = duration_sec
+                else:
+                    process_audio_segment(translator, app_instance, threadpool, pre_roll_duration=0.5)
+                    is_speaking = False
+                    start_time = time.time()
+                    last_logged_duration = 0
+                    last_voice_index = 0  # Reinicia el índice
         elif is_speaking:
             silence_counter += 1
-            # Si se detecta suficiente silencio según VOICE_WINDOW (pausa natural)
+            # Si se supera el umbral de silencio definido por VOICE_WINDOW:
             if silence_counter > int(settings["RATE"] / cfg.CHUNK * settings["VOICE_WINDOW"]):
                 # Solo procesar si se tiene la duración mínima de voz
                 if len(audio_buffer.get_data()) >= int(settings["MIN_VOICE_DURATION"] * settings["RATE"] / cfg.CHUNK):
-                    # En el caso de pausa natural, NO se aplica pre-roll para evitar repeticiones
-                    process_audio_segment(translator, app_instance, threadpool, pre_roll_duration=0.0)
+                    # Extrae el segmento hasta el último frame con voz detectado
+                    segment = audio_buffer.get_data()[:last_voice_index+1]
+                    process_audio_segment(translator, app_instance, threadpool, pre_roll_duration=0.0, data_to_process=segment)
                 else:
                     audio_buffer.clear()
                 is_speaking = False
                 start_time = time.time()
-
+                last_logged_duration = 0
+                last_voice_index = 0  # Reinicia el índice al cortar
         else:
             silence_counter += 1
             if silence_counter > int(settings["RATE"] / cfg.CHUNK * settings["MAX_CONTINUOUS_SPEECH_TIME"]):
                 silence_counter = 0
                 start_time = time.time()
+                last_logged_duration = 0
 
 
 def stop_recording():
