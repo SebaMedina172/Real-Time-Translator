@@ -27,24 +27,28 @@ load_settings()
 
 semaphore = asyncio.Semaphore(3)  # Permite un máximo de 3 hilos simultáneos
 
-# Cargar modelos
-model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
-
-# Cargar modelos de traducción según la dirección configurada
+# --- Carga de modelos según modo ---
 trans_direction = settings.get("TRANS_DIRECTION", "Automatico")
 
 if trans_direction == "Automatico":
-    # Cargar ambos modelos
+    # En modo automático se usa Whisper con detección de idioma
+    model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
+    # Cargar ambos modelos de traducción
     model_es_en = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_ES).eval()
     tokenizer_es_en = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_ES)
     
     model_en_es = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_EN).eval()
     tokenizer_en_es = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_EN)
     
-    logger.debug("Modo de traducción: Automatico (se cargan ambos modelos)")
-    
+    logger.debug("Modo de traducción: Automatico (se carga Whisper y ambos modelos de traducción)")
+    asr_mode = "whisper"
 elif trans_direction == "En -> Spa":
-    # Solo cargar el modelo para traducir de inglés a español
+    # En modo unidireccional, forzamos el idioma a inglés para ASR con Whisper
+    model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
+    logger.debug("Modo de traducción: En -> Spa (Se usa Whisper forzado a inglés)")
+    asr_mode = "whisper_forced"
+    forced_language = "en"
+    # Cargar únicamente el modelo de traducción de inglés a español
     model_en_es = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_EN).eval()
     tokenizer_en_es = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_EN)
     
@@ -55,7 +59,12 @@ elif trans_direction == "En -> Spa":
     logger.debug("Modo de traducción: En -> Spa (se carga únicamente el modelo de inglés a español)")
     
 elif trans_direction == "Spa -> En":
-    # Solo cargar el modelo para traducir de español a inglés
+    # En modo unidireccional, forzamos el idioma a español para ASR con Whisper
+    model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
+    logger.debug("Modo de traducción: Spa -> En (Se usa Whisper forzado a español)")
+    asr_mode = "whisper_forced"
+    forced_language = "es"
+    # Cargar únicamente el modelo de traducción de español a inglés
     model_es_en = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_ES).eval()
     tokenizer_es_en = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_ES)
     
@@ -113,7 +122,6 @@ def should_postprocess(text: str, context: str) -> bool:
     return False
 
 def cleanup_memory():
-    """Limpieza optimizada sin spaCy"""
     import gc, torch
     gc.collect()
     if torch.cuda.is_available():
@@ -133,6 +141,25 @@ async def translate_marian(text, tokenizer, model):
     finally:
         del encoded_text, translated_tokens
 
+# Función para transcribir usando Whisper (modo automático)
+async def transcribe_with_whisper(audio_file):
+    logger.debug(f'Archivo pasado al Transcribe (Whisper): {audio_file}')
+    audio_file_abs = os.path.abspath(audio_file)
+    with torch.inference_mode():
+        result = await asyncio.to_thread(model.transcribe, audio_file_abs)
+    text = result.get('text', '').strip()
+    cleanup_memory()
+    return result, text
+
+# Función para transcribir forzando el idioma con Whisper (modo unidireccional)
+async def transcribe_with_whisper_forced(audio_file, forced_language):
+    logger.debug(f'Archivo pasado al Transcribe (Whisper forzado): {audio_file}')
+    audio_file_abs = os.path.abspath(audio_file)
+    with torch.inference_mode():
+        result = await asyncio.to_thread(model.transcribe, audio_file_abs, language=forced_language)
+    text = result.get('text', '').strip()
+    cleanup_memory()
+    return result, text
 
 async def transcribe_and_translate(audio_file):
     logger.debug(f'Archivo pasado al Transcribe: {audio_file}')
@@ -142,23 +169,18 @@ async def transcribe_and_translate(audio_file):
     # Verificar permisos y tamaño del archivo (por ejemplo, mínimo 1 KB)
     if not os.access(audio_file_abs, os.R_OK):
         raise PermissionError(f"No se puede leer el archivo: {audio_file_abs}")
-
-    file_size = os.path.getsize(audio_file_abs)
-    if file_size < 1024:  # Umbral mínimo (puedes ajustar este valor)
+    if os.path.getsize(audio_file_abs) < 1024:
         logger.debug("El archivo de audio es demasiado pequeño, se omite el procesamiento.")
         return None
-    
     try:
+        # Seleccionar ruta según el modo configurado:
+        if asr_mode == "whisper":
+            result, text = await transcribe_with_whisper(audio_file)
+        elif asr_mode == "whisper_forced":
+            result, text = await transcribe_with_whisper_forced(audio_file, forced_language)
+        else:
+            raise ValueError("Modo ASR desconocido.")
         
-        #logger.debug(f"Verificando existencia antes de transcribir: {os.path.exists(audio_file_abs)}")
-        #logger.debug(f"Permisos de lectura antes de transcribir: {os.access(audio_file_abs, os.R_OK)}")
-        
-        # Realiza la transcripción con Whisper
-        with torch.inference_mode():
-            result = await asyncio.to_thread(model.transcribe, audio_file_abs)
-        
-        # Extrae y limpia el texto de la transcripción
-        text = result.get('text', '').strip()
         logger.debug(f"Texto transcripto: {text}")
 
         # Limpieza de memoria al finalizar la transcripcion
@@ -169,57 +191,42 @@ async def transcribe_and_translate(audio_file):
             logger.debug("La transcripción está vacía.")
             return None
 
-        # Obtener la configuración de dirección de traducción
-        trans_direction = settings.get("TRANS_DIRECTION", "Automatico")
-        logger.debug(f"Modo de traducción configurado: {trans_direction}")
+        # Determinar el idioma para segmentación:
+        language_used = forced_language if asr_mode == "whisper_forced" else result.get('language')
+        if not language_used:
+            logger.debug("No se detectó idioma en la transcripción.")
+            return None
+        logger.debug(f"Idioma a usar para segmentación: {language_used}")
 
-        # En modo fijo se omite la detección de idioma y se fuerza el valor:
-        if trans_direction == "En -> Spa":
-            # Se asume que el audio es inglés, sin importar lo que diga Whisper
-            forced_language = "en"
-            logger.debug("Forzando dirección: se asume inglés (En -> Spa)")
-        elif trans_direction == "Spa -> En":
-            # Se asume que el audio es español
-            forced_language = "es"
-            logger.debug("Forzando dirección: se asume español (Spa -> En)")
-        else:
-            # En modo automático se usa lo detectado
-            forced_language = result.get('language')
-            if not forced_language:
-                logger.debug("No se detectó idioma en la transcripción.")
-                return None
-            logger.debug(f"Idioma detectado: {forced_language}")
-
-        # Realizar la segmentación utilizando pysbd con el idioma forzado
-        lang_code = 'es' if forced_language == 'es' else 'en'
+        lang_code = 'es' if language_used == 'es' else 'en'
         segmenter = SEGMENTERS[lang_code]
         sentences = segmenter.segment(text)
         sentences = [s.strip() for s in sentences if s.strip()]
-
         if not sentences:
             logger.debug("No se obtuvieron oraciones después de la segmentación.")
             return None
         
-        # Procesar y traducir cada oración usando el modelo adecuado
+        # Traducir cada oración usando el modelo de traducción correspondiente:
         translated_sentences = []
         for sentence in sentences:
             if not sentence:
                 continue
             try:
-                if forced_language == "es":
-                    # En modo fijo Spa -> En se asume que el audio es español,
-                    # por lo que se traduce de español a inglés
-                    if model_es_en is None:
+                if language_used == "en":
+                    # En En -> Spa, traducir de inglés a español.
+                    if tokenizer_en_es is None or model_en_es is None:
+                        logger.error("El modelo para En -> Spa no está cargado.")
+                        continue
+                    translated = await translate_marian(sentence, tokenizer_en_es, model_en_es)
+                elif language_used == "es":
+                    # En Spa -> En, traducir de español a inglés.
+                    if tokenizer_es_en is None or model_es_en is None:
                         logger.error("El modelo para Spa -> En no está cargado.")
                         continue
                     translated = await translate_marian(sentence, tokenizer_es_en, model_es_en)
                 else:
-                    # En modo fijo En -> Spa se asume que el audio es inglés,
-                    # por lo que se traduce de inglés a español
-                    if model_en_es is None:
-                        logger.error("El modelo para En -> Spa no está cargado.")
-                        continue
-                    translated = await translate_marian(sentence, tokenizer_en_es, model_en_es)
+                    logger.debug("Idioma no soportado para traducción.")
+                    continue
             except Exception as trans_e:
                 logger.error(f"Error al traducir la oración '{sentence}': {trans_e}")
                 continue
@@ -259,12 +266,12 @@ async def process_audio(audio_file, ui_object):
             logger.debug("No se actualiza el texto traducido porque está vacío.")
     except Exception as e:
         logger.debug(f"Error en el procesamiento de audio: {e}")
-    finally:
-        try:
-            os.remove(audio_file)
-        except Exception as e:
-            logger.debug(f"Error al eliminar archivo: {e}")
-        cleanup_memory()
+    # finally:
+    #     try:
+    #         os.remove(audio_file)
+    #     except Exception as e:
+    #         logger.debug(f"Error al eliminar archivo: {e}")
+    #     cleanup_memory()
 
 
 
