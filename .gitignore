@@ -19,5 +19,5 @@ test.py
 /config/settings.py
 /build
 /dist
-
-
+/config/audio_config.json
+/config/interface_config.json
