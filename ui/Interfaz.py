@@ -19,15 +19,16 @@ import json
 import pyaudio
 import matplotlib.font_manager as fm
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSignal, QObject, QThread, QTimer  # Para manejar flags de maximizar/restaurar.
+from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSignal, QObject, QThread, QTimer, pyqtSlot  # Para manejar flags de maximizar/restaurar.
 from PyQt5.QtGui import QMouseEvent, QCursor, QIcon, QTextCursor, QColor
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy, QColorDialog, QGraphicsDropShadowEffect
 import config.configuracion as cfg
 from config.configuracion import settings, load_settings, calcular_valores_dinamicos
 from modules.audio_handler import record_audio, stop_recording
-from modules.speech_processing import process_audio
-import threading
 from bs4 import BeautifulSoup
+from qasync import QEventLoop
+from modules.persistent_loop import init_event_loop
+import asyncio
 
 class Translator(QObject):
     text_changed = pyqtSignal(str)
@@ -67,8 +68,6 @@ class MainApp(QtWidgets.QMainWindow):
 
         self.whisper_model = "base"  # Atributo para almacenar el modelo en minúsculas
         self.font_type = "normal"  # Atributo para almacenar el tipo de fuente en minúsculas
-        self.load_style_config()
-        self.load_audio_config()
 
         #Setear limite de mensajes
         self.Consola.document().setMaximumBlockCount(30)
@@ -76,10 +75,11 @@ class MainApp(QtWidgets.QMainWindow):
         self.Consola.setAcceptRichText(True)
 
         self.message_list = []  # Lista de diccionarios: {'id': <id>, 'html': <html_message>}
+        self.transcriptions = {}  # Diccionario para almacenar {msg_id: transcription}
         self.message_counter = 0  # Contador para generar IDs únicos
 
         # Conectar la señal para que las actualizaciones se hagan en el hilo principal
-        self.new_message_signal.connect(self.handle_new_message)
+        self.new_message_signal.connect(self.add_message)
         self.update_message_signal.connect(self.update_text_edit)
 ######################################################################################################################
         # Conectar señales de los campos de entrada de los estilos del texto a funciones
@@ -122,6 +122,9 @@ class MainApp(QtWidgets.QMainWindow):
 
         # Llenar el QComboBox con las fuentes instaladas
         self.populate_font_styles()
+
+        self.load_style_config()
+        self.load_audio_config()
 
         # # Agregar un mensaje de prueba
         self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
@@ -333,34 +336,35 @@ class MainApp(QtWidgets.QMainWindow):
     def generate_new_message_id(self):
         self.message_counter += 1
         return f"msg_{self.message_counter}"
-    
-    def handle_new_message(self, new_text: str):
-        """Slot para agregar un mensaje nuevo a la interfaz."""
-        msg_id = self.generate_new_message_id()
-        styled_text = self.format_message(new_text, msg_id)
-        self.message_list.append({'id': msg_id, 'html': styled_text})
-        self.render_messages()
-        # Puedes almacenar el último msg_id si lo necesitas para postprocesar:
-        self.last_msg_id = msg_id
 
-    def add_message(self, new_text: str) -> str:
+    def add_message(self, new_text: str, transcription: str, group_id=None) -> str:
         """
         Inserta un mensaje nuevo en la interfaz y retorna el ID asignado.
+        Además, almacena la transcripción original para postprocesado.
+        Si se provee group_id, ese mensaje pertenecerá al grupo indicado.
         """
         msg_id = self.generate_new_message_id()
-        self.update_text_edit(new_text, msg_id)
+        if group_id is None:
+            group_id = msg_id  # Si es mensaje independiente, su grupo es él mismo.
+        self.transcriptions[msg_id] = transcription  # Guardar la transcripción cruda
+        self.message_list.append({'id': msg_id, 'group': group_id, 'html': self.format_message(new_text, msg_id)})
+        self.render_messages()
         return msg_id
     
     def strip_html(self, html: str) -> str:
         soup = BeautifulSoup(html, 'html.parser')
         return soup.get_text()
-
-    def get_context(self) -> str:
-        context_texts = []
-        for message in self.message_list[-2:]:
-            plain_text = self.strip_html(message['html'])
-            context_texts.append(plain_text)
-        return " ".join(context_texts)
+    
+    def removeFusedMessages(self, candidate_id):
+        # Conserva solo el mensaje cuyo 'id' es candidate_id dentro del grupo candidate_id.
+        self.message_list = [msg for msg in self.message_list if not (msg['group'] == candidate_id and msg['id'] != candidate_id)]
+        self.render_messages()
+        
+    def remove_message(self, msg_id: str):
+        self.message_list = [msg for msg in self.message_list if msg['id'] != msg_id]
+        if msg_id in self.transcriptions:
+            del self.transcriptions[msg_id]
+        self.render_messages()
 
     def format_message(self, new_text: str, msg_id: str) -> str:
         # Aplicar el formateo de HTML como lo hacías
@@ -390,25 +394,25 @@ class MainApp(QtWidgets.QMainWindow):
         return styled_text
 
     #Actualizar mensajes
-    def update_text_edit(self, new_text, msg_id=None):
+    def update_text_edit(self, new_text, msg_id=None, group_id=None):
         if not new_text:
             return
         # Si msg_id se pasa, se actualiza el mensaje en el buffer
         if msg_id is None:
             msg_id = self.generate_new_message_id()
-        
-        # Aplica el formateo (siempre construyendo un HTML a partir del texto refinado)
+        if group_id is None:
+            group_id = msg_id
         styled_text = self.format_message(new_text, msg_id)
         
         updated = False
         for i, message in enumerate(self.message_list):
             if message['id'] == msg_id:
                 self.message_list[i]['html'] = styled_text
+                self.message_list[i]['group'] = group_id
                 updated = True
                 break
         if not updated:
-            self.message_list.append({'id': msg_id, 'html': styled_text})
-        
+            self.message_list.append({'id': msg_id, 'group': group_id, 'html': styled_text})
         self.render_messages()
 
     def render_messages(self):
@@ -431,7 +435,7 @@ class MainApp(QtWidgets.QMainWindow):
                 self.findChild(QtWidgets.QComboBox, "type_font_msg").setCurrentText(config.get("font_type", "Normal"))
                 self.findChild(QtWidgets.QPushButton, "color_msg_btn").setStyleSheet(f"color: {config.get('color_msg', '#000000')};")
                 self.findChild(QtWidgets.QDoubleSpinBox, "opacity_bg_console").setValue(config.get("opacity_bg_console", 1.0))
-                self.findChild(QtWidgets.QPushButton, "bg_color_console").setStyleSheet(f"background-color: {config.get('bg_color_console', '#464d5f')};")
+                self.findChild(QtWidgets.QPushButton, "bg_color_console").setStyleSheet(f"background-color: {config.get('color_bg_console', '#464d5f')};")
                 self.findChild(QtWidgets.QLineEdit, "name_input").setText(config.get("user_name", ""))
 
                 # Aplicar color de fondo y opacidad al messages_container
@@ -696,11 +700,17 @@ class MainApp(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    # Configura el icono global de la aplicación
-    app.setWindowIcon(QtGui.QIcon('.\\ui\\imgs\\icon.ico'))  # Ruta al icono
+    app.setWindowIcon(QtGui.QIcon('.\\ui\\imgs\\icon.ico'))
 
-    window = MainApp()  # Crea la ventana principal
-    window.setWindowIcon(QtGui.QIcon('.\\ui\\imgs\\icon.ico'))  # Configura el icono para la ventana
+    # Crea el QEventLoop integrado con Qt (esto se ejecuta en el hilo principal)
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)
+
+    # Inicializa el event loop persistente con el loop del hilo principal
+    init_event_loop(loop)
+
+    window = MainApp()
     window.show()
 
-    sys.exit(app.exec_())
+    with loop:
+        loop.run_forever()
