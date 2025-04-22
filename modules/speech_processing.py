@@ -21,6 +21,17 @@ import config.configuracion as cfg
 from config.configuracion import settings, load_settings
 import asyncio
 import torch
+# ------------------ GPU SUPPORT ------------------
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+logger.debug(f"Usando dispositivo para inferencia: {device}")
+# Check extra de CUDA
+if torch.cuda.is_available():
+    logger.debug(f"Torch CUDA version: {torch.version.cuda}")
+    logger.debug(f"CUDA device count: {torch.cuda.device_count()}")
+    logger.debug(f"GPU name: {torch.cuda.get_device_name(0)}")
+else:
+    logger.warning("CUDA no está disponible: la inferencia caerá en CPU.")
+# -------------------------------------------------
 import modules.postprocessor as postprocessor
 
 load_settings()
@@ -32,40 +43,39 @@ trans_direction = settings.get("TRANS_DIRECTION", "Automatico")
 
 if trans_direction == "Automatico":
     # En modo automático se usa Whisper con detección de idioma
-    model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
+    model = whisper.load_model(settings["WHISPER_MODEL"]).to(device).eval()
     # Cargar ambos modelos de traducción
-    model_es_en = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_ES).eval()
+    model_es_en = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_ES).to(device).eval()
     tokenizer_es_en = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_ES)
     
-    model_en_es = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_EN).eval()
+    model_en_es = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_EN).to(device).eval()
     tokenizer_en_es = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_EN)
     
     logger.debug("Modo de traducción: Automatico (se carga Whisper y ambos modelos de traducción)")
     asr_mode = "whisper"
 elif trans_direction == "En -> Spa":
     # En modo unidireccional, forzamos el idioma a inglés para ASR con Whisper
-    model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
+    model = whisper.load_model(settings["WHISPER_MODEL"]).to(device).eval()
     logger.debug("Modo de traducción: En -> Spa (Se usa Whisper forzado a inglés)")
     asr_mode = "whisper_forced"
     forced_language = "en"
     # Cargar únicamente el modelo de traducción de inglés a español
-    model_en_es = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_EN).eval()
+    model_en_es = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_EN).to(device).eval()
     tokenizer_en_es = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_EN)
     
     # No se requiere el modelo de Spa -> En
     model_es_en = None
     tokenizer_es_en = None
     
-    logger.debug("Modo de traducción: En -> Spa (se carga únicamente el modelo de inglés a español)")
-    
+    logger.debug("Modo de traducción: En -> Spa (se carga únicamente el modelo de inglés a español)") 
 elif trans_direction == "Spa -> En":
     # En modo unidireccional, forzamos el idioma a español para ASR con Whisper
-    model = whisper.load_model(settings["WHISPER_MODEL"]).eval()
+    model = whisper.load_model(settings["WHISPER_MODEL"]).to(device).eval()
     logger.debug("Modo de traducción: Spa -> En (Se usa Whisper forzado a español)")
     asr_mode = "whisper_forced"
     forced_language = "es"
     # Cargar únicamente el modelo de traducción de español a inglés
-    model_es_en = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_ES).eval()
+    model_es_en = MarianMTModel.from_pretrained(cfg.MARIAN_MODEL_ES).to(device).eval()
     tokenizer_es_en = MarianTokenizer.from_pretrained(cfg.MARIAN_MODEL_ES)
     
     # No se requiere el modelo de En -> Spa
@@ -86,41 +96,6 @@ else:
     # Ruta durante el desarrollo
     base_path = os.path.dirname(__file__)
 
-#Evaluar si utilizar postprocesado
-def should_postprocess(text: str, context: str) -> bool:
-    logger.debug(f"[should_postprocess] Longitud del texto: {len(text)}; Contexto: '{context}'")
-    
-    # Reducir el umbral de longitud para mensajes cortos
-    if len(text) < 15:
-        logger.debug("[should_postprocess] Texto demasiado corto, no se activa postprocesado")
-        return False
-    
-    # Si el contexto (texto plano) es muy corto, no se activa
-    if not context.strip() or len(context.strip()) < 10:
-        logger.debug("[should_postprocess] Contexto vacío o muy corto, no se activa postprocesado")
-        return False
-
-    text_lower = text.lower()
-
-    # Verificar la presencia de pronombres ambiguos
-    pronouns = [' he ', ' she ', ' it ', ' they ', ' él ', ' ella ', ' eso ', ' ellos ', ' ellas ']
-    if any(pronoun in text_lower for pronoun in pronouns):
-        logger.debug("[should_postprocess] Se detectaron pronombres ambiguos, se activa postprocesado")
-        return True
-
-    # Verificar la presencia de signos de interrogación, exclamación o puntos suspensivos
-    extra_keywords = ['?', '!', '...']
-    if any(keyword in text for keyword in extra_keywords):
-        logger.debug("[should_postprocess] Se detectaron signos de interrogación/exclamación, se activa postprocesado")
-        return True
-
-    # Opcionalmente, para pruebas, puedes forzar la activación:
-    # logger.debug("[should_postprocess] Forzando activación del postprocesado para pruebas")
-    # return True
-
-    logger.debug("[should_postprocess] Criterio no cumplido, no se activa postprocesado")
-    return False
-
 def cleanup_memory():
     import gc, torch
     gc.collect()
@@ -134,7 +109,10 @@ async def transcribe_and_translate_limited(audio_file):
 
 async def translate_marian(text, tokenizer, model):
     try:
+        # Tokenizamos...
         encoded_text = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        # Enviar tensores al mismo dispositivo que el modelo:
+        encoded_text = {k: v.to(device) for k, v in encoded_text.items()}
         with torch.no_grad():  # Deshabilita el cálculo de gradientes
             translated_tokens = model.generate(**encoded_text)
         return tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
@@ -145,11 +123,16 @@ async def translate_marian(text, tokenizer, model):
 async def transcribe_with_whisper(audio_file):
     logger.debug(f'Archivo pasado al Transcribe (Whisper): {audio_file}')
     audio_file_abs = os.path.abspath(audio_file)
-    with torch.inference_mode():
-        result = await asyncio.to_thread(model.transcribe, audio_file_abs)
-    text = result.get('text', '').strip()
+    try:
+        with torch.inference_mode():
+            result = await asyncio.to_thread(model.transcribe, audio_file_abs)
+        transcription_text = result.get('text', '').strip()
+    except Exception as e:
+        logger.error(f"Error en transcribe_with_whisper: {e}")
+        transcription_text = ""
+        result = {}
     cleanup_memory()
-    return result, text
+    return result, transcription_text
 
 # Función para transcribir forzando el idioma con Whisper (modo unidireccional)
 async def transcribe_with_whisper_forced(audio_file, forced_language):
@@ -157,14 +140,42 @@ async def transcribe_with_whisper_forced(audio_file, forced_language):
     audio_file_abs = os.path.abspath(audio_file)
     with torch.inference_mode():
         result = await asyncio.to_thread(model.transcribe, audio_file_abs, language=forced_language)
-    text = result.get('text', '').strip()
+    transcription_text = result.get('text', '').strip()
     cleanup_memory()
-    return result, text
+    return result, transcription_text
+
+def is_transcription_valid(text: str, min_alpha=10, max_repetition_ratio=0.6) -> bool:
+    """
+    Valida la transcripción:
+      - Debe tener al menos min_alpha caracteres alfabéticos.
+      - No debe tener una palabra que se repita en más del max_repetition_ratio del total.
+    """
+    text = text.strip()
+    if not text:
+        return False
+    # Contar caracteres alfabéticos
+    alpha_chars = sum(1 for c in text if c.isalpha())
+    if alpha_chars < min_alpha:
+        return False
+    # Dividir en palabras y contar repeticiones
+    words = text.split()
+    if not words:
+        return False
+    word_counts = {}
+    for word in words:
+        w = word.lower()
+        word_counts[w] = word_counts.get(w, 0) + 1
+    max_freq = max(word_counts.values())
+    repetition_ratio = max_freq / len(words)
+    # Si alguna palabra ocupa más de un cierto porcentaje, descarta la transcripción
+    if repetition_ratio > max_repetition_ratio:
+        return False
+    return True
 
 async def transcribe_and_translate(audio_file):
-    logger.debug(f'Archivo pasado al Transcribe: {audio_file}')
+    # logger.debug(f'Archivo pasado al Transcribe: {audio_file}')
     audio_file_abs = os.path.abspath(audio_file)
-    logger.debug(f"Ruta absoluta del archivo: {audio_file_abs}")
+    # logger.debug(f"Ruta absoluta del archivo: {audio_file_abs}")
 
     # Verificar permisos y tamaño del archivo (por ejemplo, mínimo 1 KB)
     if not os.access(audio_file_abs, os.R_OK):
@@ -175,20 +186,22 @@ async def transcribe_and_translate(audio_file):
     try:
         # Seleccionar ruta según el modo configurado:
         if asr_mode == "whisper":
-            result, text = await transcribe_with_whisper(audio_file)
+            result, transcription_text = await transcribe_with_whisper(audio_file)
         elif asr_mode == "whisper_forced":
-            result, text = await transcribe_with_whisper_forced(audio_file, forced_language)
+            result, transcription_text = await transcribe_with_whisper_forced(audio_file, forced_language)
         else:
             raise ValueError("Modo ASR desconocido.")
         
-        logger.debug(f"Texto transcripto: {text}")
-
-        # Limpieza de memoria al finalizar la transcripcion
+        logger.debug(f"Texto transcripto: {transcription_text}")
         cleanup_memory()
         
-        # Verificar que el texto obtenido no esté vacío
-        if not text:
+        if not transcription_text:
             logger.debug("La transcripción está vacía.")
+            return None
+        
+        # Filtrar transcripciones ruidosas o repetitivas.
+        if not is_transcription_valid(transcription_text):
+            logger.debug("La transcripción no es válida (ruido o repeticiones excesivas). Se descarta.")
             return None
 
         # Determinar el idioma para segmentación:
@@ -200,7 +213,7 @@ async def transcribe_and_translate(audio_file):
 
         lang_code = 'es' if language_used == 'es' else 'en'
         segmenter = SEGMENTERS[lang_code]
-        sentences = segmenter.segment(text)
+        sentences = segmenter.segment(transcription_text)
         sentences = [s.strip() for s in sentences if s.strip()]
         if not sentences:
             logger.debug("No se obtuvieron oraciones después de la segmentación.")
@@ -239,7 +252,7 @@ async def transcribe_and_translate(audio_file):
 
         # Limpieza de memoria tras la traducción
         cleanup_memory()
-        return translated_text if translated_text else None
+        return (translated_text, transcription_text) if translated_text else None
 
     except Exception as e:
         logger.debug(f"Error al transcribir o traducir: {e}")
@@ -247,31 +260,26 @@ async def transcribe_and_translate(audio_file):
 
 async def process_audio(audio_file, ui_object):
     try:
-        translated_text = await transcribe_and_translate_limited(audio_file)
-        if translated_text:
-            cfg.translated_text = translated_text
+        result = await transcribe_and_translate_limited(audio_file)
+        if result:
+            translation_text, transcription_text = result
+            cfg.translated_text = translation_text
             logger.debug(f"Texto traducido del process: {cfg.translated_text}")
-            # Emite la señal para agregar el mensaje en la interfaz
-            ui_object.new_message_signal.emit(cfg.translated_text)
-            # # Obtén el contexto (por ejemplo, los últimos 2 mensajes)
-            # context = ui_object.get_context()
-            # if should_postprocess(cfg.translated_text, context):
-            #     logger.debug("Se activa el postprocesado automáticamente.")
-            #     # Supongamos que el último mensaje agregado tiene el ID almacenado en ui_object.last_msg_id
-            #     msg_id = ui_object.last_msg_id
-            #     await postprocessor.process_postediting(msg_id, cfg.translated_text, context, ui_object)
-            # else:
-            #     logger.debug("No se activa el postprocesado (criterio no cumplido).")
+            # Agregar el mensaje a la UI y almacenar la transcripción cruda
+            msg_id = ui_object.add_message(translation_text, transcription_text)
+            logger.debug(f"Mensaje agregado con ID: {msg_id}")
+            # Llamar al postprocesado, usando la transcripción cruda
+            await postprocessor.handle_new_transcription(transcription_text, msg_id, ui_object)
         else:
             logger.debug("No se actualiza el texto traducido porque está vacío.")
     except Exception as e:
         logger.debug(f"Error en el procesamiento de audio: {e}")
-    # finally:
-    #     try:
-    #         os.remove(audio_file)
-    #     except Exception as e:
-    #         logger.debug(f"Error al eliminar archivo: {e}")
-    #     cleanup_memory()
+    finally:
+        try:
+            os.remove(audio_file)
+        except Exception as e:
+            logger.debug(f"Error al eliminar archivo: {e}")
+        cleanup_memory()
 
 
 
