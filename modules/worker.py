@@ -35,6 +35,7 @@ class AudioProcessingWorker(QRunnable):
             )
             # Bloqueamos hasta que la tarea termine y obtenemos el resultado
             translated_text = future.result()
-            self.signals.finished.emit(translated_text)
+            # Incluso si el texto es vacío, no forzamos una excepción
+            self.signals.finished.emit(translated_text if translated_text else "")
         except Exception as e:
             logger.debug(f"Error en el AudioProcessingWorker: {e}")
