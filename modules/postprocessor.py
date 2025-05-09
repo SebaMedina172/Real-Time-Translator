@@ -5,6 +5,8 @@ from PyQt5.QtCore import QTimer
 import difflib
 import logging
 from logging.handlers import RotatingFileHandler
+from modules.load_models import translator_en_es, translator_es_en
+import torch
 
 # Configuración del logger
 logger = logging.getLogger(__name__)
@@ -13,6 +15,9 @@ handler = RotatingFileHandler('app.log', maxBytes=5 * 1024 * 1024, backupCount=5
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+# Dispositivo
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Variable global para almacenar el candidato a fusión.
 _candidate = None  # Diccionario: {'id': <msg_id>, 'text': <transcription>}
@@ -51,7 +56,7 @@ def finalize_candidate(ui_object):
         candidate_text = _candidate['text']
         # Solo se actualiza la UI si se fusionaron al menos dos mensajes.
         if _candidate.get('count', 1) >= 2:
-            final_translation = retranslate_text(candidate_text)
+            final_translation = retranslate_text(candidate_text, _candidate["lang"])
             logger.debug(f"Timeout: finalizando candidato {candidate_id} con: {final_translation}")
             QTimer.singleShot(10, lambda: ui_object.update_text_edit(final_translation, candidate_id))
         else:
@@ -80,16 +85,34 @@ def is_message_incomplete(text: str) -> bool:
 def is_continuation(prev_text: str, new_text: str) -> bool:
     """
     Determina si el nuevo mensaje parece ser continuación del anterior.
-    Regla simple: si el nuevo mensaje comienza con minúscula.
+    Ahora:
+     - Si prev_text acaba en '...' o '…', lo consideramos incompleto (continúa).
+     - Si acaba en ., ?, ! (単), lo consideramos fuerte (no continúa) a menos que
+       haya solapamiento de palabras.
     """
-    # 1) Caso básico: prev no termina en signo fuerte y new no empieza con mayúscula
-    if prev_text and prev_text[-1] not in '.?!…' and not new_text[0].isupper():
+    prev = prev_text.strip()
+    new = new_text.strip()
+    if not prev or not new:
+        return False
+
+    # 1) Si hay sufijo de elipsis, tratamos como continuación si arranca en minúscula
+    if (prev.endswith("...") or prev.endswith("…")) and new[0].islower():
         return True
 
-    # 2) Solapamiento de 2 últimos / 2 primeros
-    w1, w2 = prev_text.split()[-2:], new_text.split()[:2]
+    # 2) Si NO acaba en signo fuerte (., ?, !) y empieza en minúscula
+    if prev[-1] not in ".?!" and new[0].islower():
+        return True
+
+    # 3) Solapamiento de palabras (ignorando puntuación final)
+    def tokenize(s):
+        return [w.strip(".,?!…") for w in s.split()]
+
+    w1 = tokenize(prev)[-2:]
+    w2 = tokenize(new)[:2]
     if w1 and w1 == w2:
         return True
+
+    return False
 
 def token_similarity(word1: str, word2: str) -> float:
     """Calcula la similitud entre dos tokens usando difflib."""
@@ -162,16 +185,15 @@ def smart_fuse_texts(text1: str, text2: str, sim_threshold=0.7, max_removals=2) 
 def fuse_texts(text1: str, text2: str) -> str:
     return smart_fuse_texts(text1, text2)
 
-def retranslate_text(text: str) -> str:
-    """
-    Función stub para re-traducir el texto fusionado.
-    Aquí se integraría un modelo de traducción ligero.
-    Por ahora, se simula agregando " (retranslated)".
-    """
-    return text + " (retranslated)"
+def retranslate_text(text: str, src_lang: str) -> str:
+    if src_lang == "en":
+        out = translator_en_es(text, max_length=text.count(" ")+50, num_beams=4, early_stopping=True)
+    else:
+        out = translator_es_en(text, max_length=text.count(" ")+50, num_beams=4, early_stopping=True)
+    return out[0]["translation_text"]
 
 ##################### ---- Procesamiento iterativo del candidato ---- ##############################
-async def process_candidate(new_text: str, new_msg_id: str, ui_object):
+async def process_candidate(new_text: str, new_msg_id: str, ui_object, lang: str):
     """
     Procesa el nuevo mensaje (transcripción cruda) junto con el candidato acumulado de forma iterativa.
     
@@ -188,39 +210,44 @@ async def process_candidate(new_text: str, new_msg_id: str, ui_object):
     
     if not new_plain:
         return
+    
+    # Si hay candidato previo con distinto idioma, descartar inmediatamente.
+    if _candidate is not None and _candidate.get('lang') != lang:
+        logger.debug(f"Idioma cambiado de {_candidate.get('lang')} a {lang}, descartando candidato {_candidate['id']}")
+        finalize_candidate(ui_object)
+        _candidate = None
 
     # Si no hay candidato, evaluamos el mensaje actual:
     if _candidate is None:
         if is_message_incomplete(new_plain):
-            _candidate = {"id": new_msg_id, "text": new_plain, "count": 1}
-            logger.debug(f"Guardado candidato: ID {_candidate['id']} con texto: {_candidate['text']}")
+            _candidate = {"id": new_msg_id, "text": new_plain, "lang": lang, "count": 1}
+            logger.debug(f"Guardado candidato: ID {_candidate['id']} con texto: {_candidate['text']}, lang: {lang}")
             start_candidate_timer(ui_object)
         return
+    # Existe candidato con mismo idioma: reiniciar timer.
+    start_candidate_timer(ui_object)
+    # Si continúa según heurística
+    if is_continuation(_candidate['text'], new_plain):
+        fused = fuse_texts(_candidate['text'], new_plain)
+        _candidate['text'] = fused
+        _candidate['count'] += 1
+        logger.debug(f"Candidato actualizado (fusionada): {_candidate['text']}, lang: {lang}")
+        provisional_translation = retranslate_text(fused, _candidate["lang"])
+        QTimer.singleShot(0, lambda: ui_object.update_text_edit(provisional_translation, _candidate['id']))
+        ui_object.remove_message(new_msg_id)
+        if hasattr(ui_object, "removeFusedMessages"):
+            QTimer.singleShot(0, lambda: ui_object.removeFusedMessages(_candidate['id']))
     else:
-        # Existe candidato: reiniciamos el timer porque se recibió un nuevo fragmento.
-        start_candidate_timer(ui_object)
-        if is_continuation(_candidate['text'], new_plain):
-            fused = fuse_texts(_candidate['text'], new_plain)
-            _candidate['text'] = fused
-            _candidate['count'] += 1
-            logger.debug(f"Candidato actualizado (fusionada): {_candidate['text']}")
-            provisional_translation = retranslate_text(fused)
-            QTimer.singleShot(0, lambda: ui_object.update_text_edit(provisional_translation, _candidate['id']))
-            ui_object.remove_message(new_msg_id)
-            if hasattr(ui_object, "removeFusedMessages"):
-                QTimer.singleShot(0, lambda: ui_object.removeFusedMessages(_candidate['id']))
-        else:
-            logger.debug(f"El mensaje {new_msg_id} no continúa al candidato {_candidate['id']}; se descarta la fusión.")
-            # Finalizamos el candidato actual (lo actualizamos en la UI y luego lo descartamos).
-            finalize_candidate(ui_object)
-            # Luego evaluamos el nuevo mensaje de forma independiente.
-            if is_message_incomplete(new_plain):
-                _candidate = {"id": new_msg_id, "text": new_plain}
-                logger.debug(f"Nuevo candidato guardado: ID {_candidate['id']} con texto: {_candidate['text']}")
-                start_candidate_timer(ui_object)
+        logger.debug(f"El mensaje {new_msg_id} no continúa al candidato {_candidate['id']}, lang: {lang}; descartando candidato.")
+        finalize_candidate(ui_object)
+        # Evaluar nuevo mensaje como posible nuevo candidato
+        if is_message_incomplete(new_plain):
+            _candidate = {"id": new_msg_id, "text": new_plain, "lang": lang, "count": 1}
+            logger.debug(f"Guardado nuevo candidato: ID {_candidate['id']} con texto: {_candidate['text']}, lang: {lang}")
+            start_candidate_timer(ui_object)
 
-async def handle_new_transcription(new_text: str, new_msg_id: str, ui_object):
+async def handle_new_transcription(new_text: str, new_msg_id: str, ui_object, lang: str):
     """
     Esta función se llama cada vez que se agrega un mensaje a la UI, utilizando la transcripción cruda.
     """
-    await process_candidate(new_text, new_msg_id, ui_object)
+    await process_candidate(new_text, new_msg_id, ui_object, lang)

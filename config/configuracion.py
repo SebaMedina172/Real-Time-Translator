@@ -4,6 +4,7 @@ import os
 # Variables de estado
 translated_text = "Texto Default"
 recording_active = False  # Inicializa en False
+language_used = None
 
 # Modelos Traduccion: MarianMT
 MARIAN_MODEL_ES = "Helsinki-NLP/opus-mt-es-en" 
