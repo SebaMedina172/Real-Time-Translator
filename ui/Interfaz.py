@@ -456,7 +456,7 @@ class MainApp(QtWidgets.QMainWindow):
                 self.findChild(QtWidgets.QSpinBox, "vad").setValue(audio_config.get("VAD", 2))
                 self.findChild(QtWidgets.QLineEdit, "temp_dir").setText(audio_config.get("TEMP_DIR", './temp'))
                 self.findChild(QtWidgets.QSpinBox, "threshold").setValue(audio_config.get("THRESHOLD", 500))
-                self.findChild(QtWidgets.QComboBox, "whisper_model").setCurrentText(audio_config.get("WHISPER_MODEL", "tiny"))
+                self.findChild(QtWidgets.QComboBox,"whisper_model").setCurrentText(audio_config.get("WHISPER_MODEL","Tiny"))
                 self.findChild(QtWidgets.QComboBox, "trans_direction").setCurrentText(audio_config.get("TRANS_DIRECTION", "tiny"))
 
 #####################################################################################################
@@ -492,7 +492,7 @@ class MainApp(QtWidgets.QMainWindow):
             "VAD": self.findChild(QtWidgets.QSpinBox, "vad").value(),
             "TEMP_DIR": self.findChild(QtWidgets.QLineEdit, "temp_dir").text(),
             "THRESHOLD": self.findChild(QtWidgets.QSpinBox, "threshold").value(),
-            "WHISPER_MODEL": self.whisper_model,
+            "WHISPER_MODEL": self.findChild(QtWidgets.QComboBox,"whisper_model").currentText(),
             "BUFFER_SIZE": self.findChild(QtWidgets.QSpinBox, "buffer_size").value(),
             "TRANS_DIRECTION": self.findChild(QtWidgets.QComboBox, "trans_direction").currentText(),
         }
