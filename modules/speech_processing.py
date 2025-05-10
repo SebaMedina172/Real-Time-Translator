@@ -1,5 +1,16 @@
-import sys
-import os
+import os, sys
+
+# Determina base_path igual que para UI y assets
+base_path = getattr(sys, "_MEIPASS", os.path.dirname(__file__))
+
+# Indica a ffmpeg/whisper dónde está el ejecutable
+ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
+os.environ["FFMPEG_BINARY"] = ffmpeg_path
+# también añadir al PATH para que cualquier subprocess lo encuentre
+os.environ["PATH"] = base_path + os.pathsep + os.environ.get("PATH", "")
+
+# ahora ya puedes importar whisper sin que busque en PATH del sistema
+import whisper
 # Agregar la carpeta raíz del proyecto al PYTHONPATH
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 

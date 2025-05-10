@@ -1,3 +1,18 @@
+import subprocess, sys
+
+if sys.platform == "win32":
+    # Flag to tell CreateProcess “no console”
+    NO_WINDOW = 0x08000000  # subprocess.CREATE_NO_WINDOW
+
+    _orig_popen = subprocess.Popen
+
+    def _popen_no_window(*args, **kwargs):
+        # inject the flag if the caller did not explicitly override it
+        kwargs.setdefault("creationflags", NO_WINDOW)
+        return _orig_popen(*args, **kwargs)
+
+    subprocess.Popen = _popen_no_window
+
 import sys
 import os
 # Agregar la carpeta raíz al PYTHONPATH
@@ -56,15 +71,14 @@ class MainApp(QtWidgets.QMainWindow):
     update_message_signal = pyqtSignal(str, str)     # (refined_text, msg_id)
     def __init__(self):
         super(MainApp, self).__init__()
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(__file__))
         # Carga el archivo .ui
-        # ui_file_path = os.path.join(os.path.dirname(__file__), 'RTT_dock.ui')
-        uic.loadUi('.\\ui\\RTT_dock_Edit.ui', self)  # Cargar el archivo .ui
-        # uic.loadUi("../ui/RTT.ui", self)
-        config_style_path = os.path.join(os.path.dirname(__file__), '..\\config\\interface_config.json')
-        self.config_style_file = config_style_path
+        ui_path = os.path.join(base_path, "ui", "RTT_dock_Edit.ui")
+        uic.loadUi(ui_path, self)
 
-        config_audio_path = os.path.join(os.path.dirname(__file__), '..\\config\\audio_config.json')
-        self.config_audio_file = config_audio_path
+        self.config_style_file = os.path.join(base_path, "config", "interface_config.json")
+
+        self.config_audio_file = os.path.join(base_path, "config", "audio_config.json")
 
         self.whisper_model = "base"  # Atributo para almacenar el modelo en minúsculas
         self.font_type = "normal"  # Atributo para almacenar el tipo de fuente en minúsculas
@@ -210,6 +224,9 @@ class MainApp(QtWidgets.QMainWindow):
     
     #Colapsar los botones
     def shrink_frame(self):
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(__file__))
+        imgs_path = os.path.join(base_path, "ui", "imgs")
+
          # Acceder al frame 'column_1' desde el botón
         frame = self.sender().parent().parent()  # Usamos .parent() dos veces, una para el frame del botón y otra para column_1
         frame.setFixedWidth(self.shrunk_frame_width)  # Reducir el ancho.
@@ -218,9 +235,9 @@ class MainApp(QtWidgets.QMainWindow):
         self.play.setText("") 
         self.pause.setText("")
         self.config.setText("")
-        self.play.setIcon(QIcon(".\\ui\\imgs\\play_white.svg"))
-        self.pause.setIcon(QIcon(".\\ui\\imgs\\stop_white.svg"))
-        self.config.setIcon(QIcon(".\\ui\\imgs\\config_white.svg"))
+        self.play .setIcon(QIcon(os.path.join(imgs_path, "play_white.svg")))
+        self.pause.setIcon(QIcon(os.path.join(imgs_path, "stop_white.svg")))
+        self.config.setIcon(QIcon(os.path.join(imgs_path, "config_white.svg")))
 
         self.Larrow.hide()  # Ocultar Larrow
         self.Rarrow.show()  # Mostrar Rarrow
