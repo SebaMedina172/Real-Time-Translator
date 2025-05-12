@@ -141,16 +141,11 @@ RTT/
 
 ## 🖼️ Screenshots
 ### English Video
-<video width="480" controls>
-  <source src="./Audio_samples/English%20Sample.mp4" type="video/mp4">
-  Tu navegador no soporta la etiqueta de video.
-</video>
+[▶️ Ver video en GitHub](https://github.com/SebaMedina172/Real-Time-Translator/blob/main/Audio_samples/English%20Sample.mp4)
 
 ### Spanish Video
-<video width="480" controls>
-  <source src="Audio_samples/Spanish%20Samplemp4.mp4" type="video/mp4">
-  Tu navegador no soporta la etiqueta de video.
-</video>
+[▶️ Reproducir video (raw)](https://raw.githubusercontent.com/SebaMedina172/Real-Time-Translator/main/Audio_samples/Spanish%20Sample.mp4)
+
 ---
 
 ## 📄 License
