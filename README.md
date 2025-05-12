@@ -57,15 +57,17 @@ RTT is a desktop application that captures microphone input, transcribes spoken 
 
 ## ⚙️ Installation
 
-1. **Clone the repo**  
-   ```bash
-   git clone https://github.com/tu-usuario/RTT.git
-   cd RTT
-   Download Release
+1. Download the latest `app/` folder from the repository.
+   
+3. Unzip/extract `app/` into any directory on your computer.
+   
+5. In the resulting folder, you will find:
+- `RTT.exe`
+- `internals/` folder with the necessary modules and configuration files
 
-   Go to the Releases page
-
-   Download RTT-Setup.exe
+4. Run `RTT.exe`.
+  
+5. Done! The application will start and display the user interface to configure your input device and begin real-time translation.
    
 ---
 
@@ -80,29 +82,41 @@ RTT is a desktop application that captures microphone input, transcribes spoken 
 
 5. Speak into your microphone—translations appear live in the console window.
 
+---
+
 ## 🔧 Configuration
 ### *Translation Settings*
 
-| Option                 | Description                                               |
-| ---------------------- | --------------------------------------------------------- |
-| Silence Threshold      | Minimum dB level to start detecting speech                |
-| Voice Window           | Seconds below threshold to consider speech ended          |
-| Min/Max Audio Duration | Bounds for fragment length before forced cut-off          |
-| Whisper Model          | Select quality vs. speed (e.g. `small`, `base`, `medium`) |
-| Translation Direction  | EN → SPA, SPA → EN or Auto-detect (EN ↔ SPA)                              |
+
+| Option                     | Description                                                                                                                                                                           |
+|----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Microphone                 | Select from detected system input devices to use for audio capture and translation.                                                                                                   |
+| Translation Models         | Choose which Whisper model to use for transcription (e.g. `tiny`, `base`, `small`, `medium`, `large`), balancing speed vs. accuracy.                                                  |
+| Translation Direction      | EN → SPA, SPA → EN, or Auto-detect (En ⇔ SPA).                                                                                     |
+| Silence Threshold          | dB level below which audio is considered “silent.”                                                                                                                                    |
+| Voice Window               | Maximum time (in seconds) that audio can remain below the Silence Threshold before a segment is closed. Low values → more fragments; high values → fewer, larger segments.            |
+| Min. Voice Duration        | Minimum continuous speech duration (in seconds) required to start a segment. Low values → possible false positives; high values → may cut off the start of phrases.                   |
+| Max. Audio Duration        | Maximum length (in seconds) of a single audio segment before it is forcefully closed. High values can introduce latency or sync errors in real-time translation.                      |
+| Context Time               | Amount of previous audio (in seconds) considered when post-processing for coherence. Low values → may omit initial words; high values → may repeat words from earlier segments.       |
+| Mic Sensitivity            | Adjustment of input device sensitivity: lower values → more sensitive; higher values → less sensitive.                                                                                |
+| Temp Files Path            | Filesystem path where temporary audio files are stored during processing. Not recommended to modify unless you know what you’re doing.                                                |
+| Buffer Size                | Size of the audio buffer used internally (in frames). Modifying can destabilize the audio capture loop—leave at default.                                                              |
+| Audio Segment Length       | Duration (in milliseconds) of each chunk analyzed per cycle. Changing this (along with sample rate) affects how the system computes its internal RATE parameter—do not alter.         |
+| Sample Rate                | Number of audio samples per second. It should remain at the default value to ensure proper operation; changing it may disrupt synchronization and processing.                         |
 
 ### *Text Settings*
 | Option      | Description                             |
 | ----------- | --------------------------------------- |
-| Font Family | Console font (e.g. `Consolas`, `Arial`) |
-| Font Size   | Text size in px                     |
-| Font Type   | Text normal, bold, italic, underline              |
-| Text Color  | Hex code or named colour                |
-| label Name   | Name before each translation                |
-| background Opacity   | Color opacity fo background                     |
-| Background Color  | Hex code or named colour for background console |
+| Font Family        | Console font (e.g. `Consolas`, `Arial`)         |
+| Font Size          | Text size in px                                 |
+| Font Type          | Text normal, bold, italic, underline            |
+| Text Color         | Hex code or named colour                        |
+| label Name         | Name before each translation                    |
+| background Opacity | Color opacity fo background                     |
+| Background Color   | Hex code or named colour for background console |
 
 ---
+
 ## 🏗 Architecture & Modules
 ```text
 RTT/
@@ -123,7 +137,15 @@ RTT/
 │   └── imgs/                # Icons & images
 └── RTT.exe                   # Packaged executable (Releases)
 ```
+---
+
 ## 🖼️ Screenshots
 *I´ve to put some test videos here*
 
+---
+
 ## 📄 License
+
+© 2025 Medina Sebastian. All rights reserved.
+
+This is a personal project. Unauthorized copying, distribution, or modification is prohibited.
