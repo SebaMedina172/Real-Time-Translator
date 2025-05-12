@@ -141,10 +141,10 @@ RTT/
 
 ## 🖼️ Screenshots
 ### English Video
-[▶️ Ver video en GitHub](https://github.com/SebaMedina172/Real-Time-Translator/blob/main/Audio_samples/English%20Sample.mp4)
+[▶️Click to reproduce](https://raw.githubusercontent.com/SebaMedina172/Real-Time-Translator/main/Audio_samples/English%20Sample.mp4)
 
 ### Spanish Video
-[▶️ Reproducir video (raw)](https://raw.githubusercontent.com/SebaMedina172/Real-Time-Translator/main/Audio_samples/Spanish%20Sample.mp4)
+[▶️Click to reproduce](https://raw.githubusercontent.com/SebaMedina172/Real-Time-Translator/main/Audio_samples/Spanish%20Samplemp4.mp4)
 
 ---
 
