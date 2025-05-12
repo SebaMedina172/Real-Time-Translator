@@ -141,10 +141,16 @@ RTT/
 
 ## 🖼️ Screenshots
 ### English Video
-[English Sample]([./Audio_samples/English%20Sample.mp4](https://drive.google.com/file/d/1Hw3FgjGlFx30zEat0qjYBz9fAqeGpXHB/view?usp=sharing))
+<video width="480" controls>
+  <source src="./Audio_samples/English%20Sample.mp4" type="video/mp4">
+  Tu navegador no soporta la etiqueta de video.
+</video>
 
 ### Spanish Video
-[English Sample]([[./Audio_samples/English%20Sample.mp4](https://drive.google.com/file/d/1Hw3FgjGlFx30zEat0qjYBz9fAqeGpXHB/view?usp=sharing](https://drive.google.com/file/d/16_yjrMAl2QU5vxGs-r5OTPmWfS3sBwY9/view?usp=sharing)))
+<video width="480" controls>
+  <source src="Audio_samples/Spanish%20Samplemp4.mp4" type="video/mp4">
+  Tu navegador no soporta la etiqueta de video.
+</video>
 ---
 
 ## 📄 License
