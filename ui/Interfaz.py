@@ -140,8 +140,11 @@ class MainApp(QtWidgets.QMainWindow):
         self.load_style_config()
         self.load_audio_config()
 
-        # # Agregar un mensaje de prueba
-        self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
+        icon_path = os.path.join(base_path, "ui", "imgs", "icon.ico")
+        self.setWindowIcon(QIcon(icon_path))
+
+        # # # Agregar un mensaje de prueba
+        # self.update_text_edit("Mensaje de prueba: Esto debería aparecer en la interfaz.")
 
     #funcion para cargar los mics detectados
     def populate_microphone_list(self):
