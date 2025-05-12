@@ -57,18 +57,21 @@ RTT is a desktop application that captures microphone input, transcribes spoken 
 
 ## ⚙️ Installation
 
-1. Download the latest `app/` folder from the repository.
-   
-3. Unzip/extract `app/` into any directory on your computer.
-   
-5. In the resulting folder, you will find:
-- `RTT.exe`
-- `internals/` folder with the necessary modules and configuration files
+1. **Download the package**
+Click the following link to download the compressed file containing your application:
 
-4. Run `RTT.exe`.
-  
-5. Done! The application will start and display the user interface to configure your input device and begin real-time translation.
-   
+  [⬇️ Download Real-Time Translator (.rar)](https://drive.google.com/uc?export=download&id=1LA1LnGokSzRAPzy7oPpyBkDqLUHQ24X8)
+
+2. **Unzip the file**
+Once downloaded, unzip the `.rar` file into the folder of your choice:
+
+```bash
+  # On Linux/macOS (you need unrar installed)
+  unrar x app.rar
+
+  # On Windows
+  # Right-click on app.rar → Extract here
+```
 ---
 
 ## 🚀 Usage
