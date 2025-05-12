@@ -6,16 +6,15 @@
 
 ## 📖 Table of Contents
 
-1. [Introduction](#introduction)  
-2. [Features](#features)  
-3. [Tech Stack](#tech-stack)  
-4. [Installation](#-installation)  
+1. [Introduction](#-introduction)  
+2. [Features](#-features)  
+3. [Tech Stack](#%EF%B8%8F-tech-stack)  
+4. [Installation](#%EF%B8%8F-installation)  
 5. [Usage](#-usage)  
-6. [Configuration](#configuration)  
-7. [Architecture & Modules](#architecture--modules)  
-8. [Screenshots](#screenshots)  
-9. [Contributing](#contributing)  
-10. [License](#license)
+6. [Configuration](#-configuration)  
+7. [Architecture & Modules](#-architecture--modules)  
+8. [Screenshots](#%EF%B8%8F-screenshots)   
+9. [License](#-license)
 
 ---
 
@@ -105,7 +104,6 @@ RTT is a desktop application that captures microphone input, transcribes spoken 
 
 ---
 ## 🏗 Architecture & Modules
-RTT/
 ```text
 RTT/
 ├── Modules/
