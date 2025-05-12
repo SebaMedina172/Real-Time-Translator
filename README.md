@@ -140,8 +140,11 @@ RTT/
 ---
 
 ## 🖼️ Screenshots
-*I´ve to put some test videos here*
+### English Video
+[English Sample](./Audio_samples/English%20Sample.mp4)
 
+### Spanish Video
+[Spanish Sample](./Audio_samples/Spanish%20Samplemp4.mp4)
 ---
 
 ## 📄 License
