@@ -21,3 +21,7 @@ test.py
 /dist
 /config/audio_config.json
 /config/interface_config.json
+interfaz.spec
+app.log
+ui/__pycache__/
+ffmpeg/
